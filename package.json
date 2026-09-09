@@ -1,0 +1,16 @@
+{
+  "name": "starlight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "An interactive map of the semester, rendered from course_map_schema_v2.json",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node src/merge.test.js && node src/sync.test.js"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}
