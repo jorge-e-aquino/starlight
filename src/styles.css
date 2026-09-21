@@ -2604,6 +2604,121 @@ button { font: inherit; color: inherit; }
 .node[data-tier="heavy"] .node-caption { font-weight: var(--weight-650); }
 .node[data-blocked="true"] { opacity: 0.95; }
 
+/* --- Fieldwork: the Business Lab pipeline (Phase 5) --- */
+
+.field-view {
+  width: 100%;
+  max-width: var(--size-reading);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-28) var(--space-72);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+.field-view > section {
+  min-width: 0;
+  padding: var(--space-20);
+  border: var(--space-1) solid var(--glass-edge);
+  border-radius: var(--space-14);
+  background: var(--glass);
+  box-shadow: var(--glass-shadow);
+}
+.field-title {
+  font-size: var(--text-heading-large);
+  font-weight: var(--weight-650);
+  letter-spacing: var(--tracking-minus-0-01);
+  margin: 0;
+}
+.field-cadence {
+  margin: 0;
+  padding: var(--space-14) var(--space-18);
+  font-size: var(--text-body-compact);
+  color: var(--crunch-ink);
+  line-height: var(--leading-1-45);
+  background: var(--crunch);
+  border: var(--space-1) solid var(--crunch-edge);
+  border-radius: var(--space-11);
+}
+.field-health { margin: 0 0 var(--space-11); font-size: var(--text-body-compact); color: var(--ink-soft); }
+.field-empty { margin: 0; font-size: var(--text-control); color: var(--ink-faint); line-height: var(--leading-1-45); }
+.field-fine { margin: var(--space-11) 0 0; font-size: var(--text-control); color: var(--ink-faint); line-height: var(--leading-1-45); }
+.field-due { margin: 0 0 var(--space-11); font-size: var(--text-body-compact); color: var(--ink-soft); }
+
+.field-contact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-11) var(--space-14);
+  border-left: var(--space-6) solid var(--course-color, var(--accent));
+  border-radius: var(--space-3);
+  background: var(--white-58);
+}
+.field-contact + .field-contact { margin-top: var(--space-8); }
+.field-contact-head { display: flex; align-items: baseline; gap: var(--space-8); flex-wrap: wrap; }
+.field-contact-name {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--weight-600);
+  color: var(--ink);
+  text-align: left;
+}
+.field-contact-org { font-size: var(--text-control); font-weight: var(--weight-500); color: var(--ink-faint); }
+.field-followup { font-size: var(--text-control); color: var(--state-blocked-ink); }
+.field-contact[data-state="scheduled"] { border-left-color: var(--accent); }
+.field-contact[data-state="no-reply"] { border-left-style: dashed; border-left-color: var(--state-blocked-ink); }
+.field-contact[data-state="interviewed"] { border-left-color: var(--state-verified-ink); }
+.field-state-form .truth-field[hidden] { display: none; }
+
+.field-rules { margin: 0; padding-left: var(--space-20); display: grid; gap: var(--space-4); }
+.field-rules li { font-size: var(--text-body-compact); color: var(--ink-soft); line-height: var(--leading-1-45); }
+.field-questions { margin-top: var(--space-11); }
+
+.field-finding-list { margin: 0 0 var(--space-11); padding: 0; list-style: none; display: grid; gap: var(--space-8); }
+.field-finding {
+  padding: var(--space-11) var(--space-14);
+  border-left: var(--space-6) solid var(--ink-faint);
+  border-radius: var(--space-3);
+  background: var(--white-58);
+}
+.field-finding[data-tag="supports"] { border-left-color: var(--state-verified-ink); }
+.field-finding[data-tag="breaks"] { border-left-color: var(--state-conflict-ink); }
+.field-finding-meta { margin: 0; font-size: var(--text-caption-small); color: var(--ink-faint); }
+.field-finding-text { margin: var(--space-2) 0 0; font-size: var(--text-body-compact); color: var(--ink); line-height: var(--leading-1-45); }
+.field-finding-tag { margin: var(--space-4) 0 0; font-size: var(--text-control); color: var(--ink-faint); }
+.field-finding .linky { font-size: var(--text-control); }
+.field-findings .truth-form { grid-template-columns: 1fr 1fr; }
+.field-findings .truth-form .truth-field:first-child,
+.field-findings .truth-form textarea { grid-column: 1 / -1; }
+.field-findings .truth-form .truth-field:nth-child(3) { grid-column: 1 / -1; }
+
+.field-draft-text {
+  width: 100%;
+  font: inherit;
+  font-size: var(--text-control);
+  color: var(--ink);
+  line-height: var(--leading-1-45);
+  background: var(--white-84);
+  border: var(--space-1) solid var(--rule);
+  border-radius: var(--space-3);
+  padding: var(--space-8) var(--space-11);
+  resize: vertical;
+}
+.field-draft-text:focus { outline: var(--space-2) solid var(--focus-ring); outline-offset: var(--space-1); }
+.field-draft-form { display: flex; flex-direction: column; gap: var(--space-8); align-items: flex-start; }
+
+@media (pointer: coarse) {
+  .field-contact-name { min-height: 44px; }
+}
+@media (max-width: 560px) {
+  .field-view { padding-left: var(--space-16); padding-right: var(--space-16); }
+  .field-view > section { padding: var(--space-16); }
+  .field-findings .truth-form { grid-template-columns: 1fr; }
+  .field-findings .truth-form > * { grid-column: 1 / -1; }
+}
+
 /* A short daily check-in stays separate from the working list. */
 .checkin-link {
   border: 0;

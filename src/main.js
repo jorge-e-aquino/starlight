@@ -3,6 +3,7 @@ import { loadMap, listCourseIds } from './data.js';
 import { createDetailPanel } from './detail.js';
 import { renderMap, starSvg } from './render.js';
 import { renderNow } from './now.js';
+import { renderField } from './field-ui.js';
 import { renderPlan } from './plan.js';
 import { renderCheckin, renderEvening } from './ritual.js';
 import { buildDayPlan } from './schedule.js';
@@ -37,7 +38,7 @@ const anim = { mount: true, focusChanged: false };
 
 // The chosen view is part of the URL, so a particular way of looking at the
 // semester can be bookmarked or reopened.
-const VIEWS = ['now', 'plan', 'map', 'checkin', 'evening'];
+const VIEWS = ['now', 'plan', 'field', 'map', 'checkin', 'evening'];
 const requestedView = new URLSearchParams(location.search).get('view');
 const startView = VIEWS.includes(requestedView) ? requestedView : 'now';
 
@@ -123,7 +124,7 @@ try {
     shell.replaceChildren(
       buildMasthead(map, focus),
       ...buildAppStates(),
-      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' ? [] : buildEdgeTargets(ui.view)),
+      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' ? [] : buildEdgeTargets(ui.view)),
       surfaceFor(ui.view)
     );
     if (detail.openItem) {
@@ -169,6 +170,7 @@ try {
 
   function surfaceFor(view) {
     if (view === 'plan') return renderPlan(map, ctx);
+    if (view === 'field') return renderField(map, ctx);
     if (view === 'map') return renderMap(map, ctx);
     if (view === 'checkin') return renderCheckin(map, ctx);
     if (view === 'evening') return renderEvening(map, ctx);
@@ -232,7 +234,7 @@ try {
 
     const toggle = document.createElement('div');
     toggle.className = 'view-toggle';
-    [['now', 'Now'], ['plan', 'Plan'], ['map', 'Map']].forEach(([id, label]) => {
+    [['now', 'Now'], ['plan', 'Plan'], ['field', 'Field'], ['map', 'Map']].forEach(([id, label]) => {
       const b = document.createElement('button');
       b.textContent = label;
       b.className = ui.view === id ? 'on' : '';

@@ -127,6 +127,10 @@ export function mergeState(local = {}, remote = {}) {
     ...mergeRecord(local, remote),
     items: mergeCollection(local.items, remote.items),
     days: mergeCollection(local.days, remote.days),
+    // Fieldwork records merge like items: every field in a contact or a
+    // finding is a stamped decision, so the same rules apply field by field.
+    contacts: mergeCollection(local.contacts, remote.contacts),
+    findings: mergeCollection(local.findings, remote.findings),
     lastVisit: Math.max(local.lastVisit || 0, remote.lastVisit || 0) || null
   };
   // The local device's own timer and sound survive the merge untouched.

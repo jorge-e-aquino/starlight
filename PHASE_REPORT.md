@@ -157,3 +157,66 @@ The code and preview are ready; production promotion and a phone subscription
 remain deployment steps. Phase 5 needs no new user input: the Business Lab
 fieldwork rules are in the findings, and the user has authorized read-only
 Canvas review for any course-specific details.
+
+## Phase 5: Fieldwork (MGT 4803)
+
+One commit. The pipeline is overlay data, not schema data: contacts are
+discovered work, and the schema stays the map of the term.
+
+- `src/fieldwork.js`, pure and node-tested: `activeContacts`,
+  `pipelineHealth` (the metric is how many contacts sit in contacted right
+  now, with follow-ups due called out), `interviewScript` (Mom Test rules:
+  last time it happened, what it cost, never "would you", and the rules sit at
+  the top of the surface where the questions get asked), `tagLabel`,
+  `weeklyDraft` (assembles from the seven days ending at the update deadline,
+  with course and contact named), and `cadenceGap`.
+- `src/field-ui.js`: the Field surface, reachable from the view toggle.
+  Pipeline rows carry state selects with inline errors and follow-up dates for
+  no-reply; the findings log carries tag coloring; the weekly update draft
+  section has reassemble and save. The Sunday cadence line appears from the
+  Wednesday schedule even without start history; after two recorded starts,
+  it uses the recent lead time instead.
+- `src/state.js`: `upsertContact`, `removeContact`, `upsertFinding`,
+  `removeFinding`, restore actions for both removals, and `setUpdateDraft`,
+  all validated and stamped. A no-reply move requires a follow-up date; moving
+  back to another state clears the old date.
+- `src/merge.js`: `contacts` and `findings` merge record-by-record like items
+  and days. Algebra retested over both collections.
+- `tests/fieldwork.test.js`, wired into `npm test`.
+
+Overlay field classification, per the invariant that every new field is a log
+or a decision:
+
+- `contacts.<id>.{name, org, role, note, state, followUp}`: decisions. Each is
+  a claim about right now, so stamped last-write-wins; none are observations.
+- `contacts.<id>.deletedAt` and `findings.<id>.deletedAt`: tombstone
+  decisions, stamped, so a removal wins a merge outright instead of letting a
+  removed record resurrect; a later undo writes a stamped null.
+- `findings.<id>.{date, contactId, assumption, text, tag}`: decisions, same
+  reasoning. The assumption names the claim that the interview supports or
+  breaks.
+- `items.<id>.updateDraft`: a decision on the item's existing record. The
+  newest edit wins; clearing is a claim too. It drafts; the person writes.
+- No logs were added, so no `LOG_FIELDS` caps were needed.
+
+What leaves the device: `sanitizeForSync` passes the new top-level collections
+through the same decision-only strip as the rest of the overlay, so contacts
+and findings sync like ordinary work product, and the avoidance traces still
+do not. This widens synced content to include pipeline data; if the Business
+Lab's contacts and findings should stay device-local instead, say so and they
+move into `DEVICE_LOCAL` in a follow-up.
+
+Canvas review: the [Business Lab syllabus](https://gatech.instructure.com/courses/537530/assignments/syllabus)
+and [Week 5 update](https://gatech.instructure.com/courses/537530/assignments/2587938)
+show that updates are team slides presented in Wednesday class. The
+[sample deck](https://gatech.instructure.com/courses/537530/files/76342387)
+uses interview counts, hypotheses, findings, tests, and next steps. The draft
+now follows that outline in text. Canvas shows a start-of-class deadline while
+the schema has an unverified 11:59 p.m. time; no date or time was marked
+verified. The Canvas feed will propose this difference in Phase 7.
+
+Checks: all eight suites pass; build clean; the personal backup was loaded and
+re-exported with 79 data values preserved (the export timestamp refreshes).
+The Field surface was inspected on desktop and at 390 px, including first-run,
+empty, form-error, offline, storage-error, and loading states. The no-reply
+follow-up was entered and saved in an isolated browser profile.

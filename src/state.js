@@ -191,6 +191,95 @@ export function setScore(id, value) {
   patch(id, value === null ? { score: null } : { score: value, doneAt: itemState(id).doneAt || Date.now() });
 }
 
+// --- Fieldwork: the MGT 4803 pipeline, findings, and weekly update drafts ---
+//
+// The Business Lab's real work is a pipeline, and a deadline tracker cannot see
+// it, so contacts and findings live here beside the overlay's other records.
+// Every field is a stamped decision: a contact's state is a claim about right
+// now, so last-write-wins applies and a newer correction beats an older one.
+// Nothing unions, so nothing needs a LOG_FIELDS cap. Deleting is a tombstone
+// stamped like any other decision, so a removal can win a merge outright.
+
+const CONTACT_STATES = ['identified', 'contacted', 'scheduled', 'interviewed', 'no-reply'];
+
+function patchFieldRecord(collection, id, changes, at = Date.now()) {
+  store[collection] = store[collection] || {};
+  const prev = store[collection][id] || {};
+  store[collection][id] = { ...prev, ...changes, _t: stamp(prev, changes, at) };
+  commit();
+}
+
+export function contactRecord(id) {
+  return store.contacts?.[id] || {};
+}
+
+export function upsertContact(id, fields) {
+  if (!id) throw new Error('A contact needs an id.');
+  const prev = contactRecord(id);
+  if (!fields?.name?.trim() && !prev.name) throw new Error('Name the contact.');
+  const state = fields.state || prev.state || 'identified';
+  if (!CONTACT_STATES.includes(state)) throw new Error('Choose where this contact stands.');
+  if (fields.followUp && !validDate(fields.followUp)) throw new Error('Enter a real follow-up date.');
+  if (state === 'no-reply' && !validDate(fields.followUp || prev.followUp)) {
+    throw new Error('Record a follow-up date for a contact who has not replied.');
+  }
+  patchFieldRecord('contacts', id, {
+    name: fields.name?.trim() || prev.name,
+    org: fields.org?.trim() || prev.org || null,
+    role: fields.role?.trim() || prev.role || null,
+    note: fields.note?.trim() || prev.note || null,
+    state,
+    followUp: Object.hasOwn(fields, 'followUp') ? fields.followUp : prev.followUp ?? null
+  });
+  return id;
+}
+
+export function removeContact(id) {
+  patchFieldRecord('contacts', id, { deletedAt: Date.now() });
+}
+
+export function restoreContact(id) {
+  patchFieldRecord('contacts', id, { deletedAt: null });
+}
+
+export function findingRecord(id) {
+  return store.findings?.[id] || {};
+}
+
+export function upsertFinding(id, fields) {
+  const prev = findingRecord(id);
+  if (!fields?.text?.trim() && !prev.text) throw new Error('Write the finding in a sentence.');
+  if (!fields?.assumption?.trim() && !prev.assumption) throw new Error('Name the assumption this interview tested.');
+  if (!['supports', 'breaks'].includes(fields.tag || prev.tag)) {
+    throw new Error('Tag whether the finding supports or breaks the assumption.');
+  }
+  if (fields.date && !validDate(fields.date)) throw new Error('Enter a real interview date.');
+  patchFieldRecord('findings', id, {
+    date: fields.date ?? prev.date ?? null,
+    contactId: fields.contactId ?? prev.contactId ?? null,
+    assumption: fields.assumption?.trim() || prev.assumption,
+    text: fields.text?.trim() || prev.text,
+    tag: fields.tag || prev.tag
+  });
+  return id;
+}
+
+export function removeFinding(id) {
+  patchFieldRecord('findings', id, { deletedAt: Date.now() });
+}
+
+export function restoreFinding(id) {
+  patchFieldRecord('findings', id, { deletedAt: null });
+}
+
+/**
+ * The weekly update draft. A decision, like everything claimed about a current
+ * state: the newest edit wins, and clearing it is a claim too.
+ */
+export function setUpdateDraft(id, text) {
+  patch(id, { updateDraft: text == null || !String(text).trim() ? null : String(text) });
+}
+
 /**
  * The shape of one particular day: when work can actually start, and the time
  * already claimed by something else. A plan that packs from "now" assumes the
