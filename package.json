@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/merge.test.js && node src/sync.test.js && node src/state.test.js && node tests/ground-truth.test.js && node tests/grade.test.js && node tests/notification.test.js && node tests/push.test.js && node tests/fieldwork.test.js"
+    "test": "node src/merge.test.js && node src/sync.test.js && node src/state.test.js && node tests/ground-truth.test.js && node tests/grade.test.js && node tests/notification.test.js && node tests/push.test.js && node tests/fieldwork.test.js && node tests/attention.test.js"
   },
   "devDependencies": {
     "vite": "^5.4.10"

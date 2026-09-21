@@ -354,6 +354,49 @@ body {
   background-attachment: fixed;
 }
 
+/* Grounds and lighting are tokens so future themes can reuse every surface. */
+:root[data-ground="paper"] {
+  --ground: #f8f5ed; --ground-lavender: #eee4d6; --ground-blue: #e2e9e4;
+  --ground-pink: #f2e6de; --lavender-00: rgba(238, 228, 214, 0);
+  --blue-00: rgba(226, 233, 228, 0); --pink-00: rgba(242, 230, 222, 0);
+}
+:root[data-ground="slate"] {
+  --ground: #eff2f6; --ground-lavender: #dce4ed; --ground-blue: #d7e5ee;
+  --ground-pink: #e4e4ee; --lavender-00: rgba(220, 228, 237, 0);
+  --blue-00: rgba(215, 229, 238, 0); --pink-00: rgba(228, 228, 238, 0);
+}
+:root[data-scheme="dark"] { color-scheme: dark; }
+:root[data-scheme="dark"] {
+  --ground: #151927; --ground-lavender: #24233a; --ground-blue: #1d3140;
+  --ground-pink: #302638; --lavender-00: rgba(36, 35, 58, 0);
+  --blue-00: rgba(29, 49, 64, 0); --pink-00: rgba(48, 38, 56, 0);
+  --ink: #f4f1ff; --ink-soft: #c9c8e2; --ink-faint: #b5b4cf;
+  --state-unchecked-ink: #c7c0e6; --state-verified-ink: #8cdcb7;
+  --state-blocked-ink: #f0c88c; --state-conflict-ink: #ffb6a0;
+  --accent: #9ca6ff; --accent-ink: #5965d5; --accent-2: #c69af3;
+  --accent-action-end: #7453ae; --danger-ink: #ffa7c0;
+  --crunch-ink: #d5a4ee; --white-58: rgba(38, 42, 64, .83);
+  --white-84: rgba(43, 47, 69, .96); --white-75: rgba(86, 91, 125, .48);
+  --white-60: rgba(42, 46, 67, .9); --white-70: rgba(43, 48, 70, .92);
+  --white-62: rgba(54, 59, 83, .94); --white-66: rgba(43, 48, 70, .94);
+  --white-85: rgba(44, 49, 72, .97); --white-40: rgba(46, 51, 74, .85);
+  --white-74: rgba(45, 49, 72, .94); --white-72: rgba(45, 49, 72, .9);
+  --white-95: rgba(55, 60, 86, .98); --white-94: rgba(47, 51, 75, .97);
+  --white-96: rgba(48, 52, 76, .98); --white-68: rgba(45, 49, 72, .93);
+  --white-50: rgba(46, 50, 74, .82); --white-30: rgba(44, 49, 72, .7);
+  --white-24: rgba(44, 49, 72, .65); --panel-82: rgba(38, 42, 64, .96);
+  --lane-86: rgba(35, 39, 60, .96); --ground-72: rgba(21, 25, 39, .85);
+  --ground-90: rgba(21, 25, 39, .94); --inverse-93: rgba(36, 40, 62, .96);
+  --inverse-94: rgba(36, 40, 62, .97); --rule-16: rgba(169, 178, 231, .3);
+  --rule-09: rgba(169, 178, 231, .18); --rule-17: rgba(169, 178, 231, .34);
+  --rule-06: rgba(169, 178, 231, .13); --shadow-05: rgba(0, 0, 0, .16);
+  --shadow-08: rgba(0, 0, 0, .24); --surface-control: var(--white-70);
+  --surface-subtle: var(--white-40); --surface-hover: var(--white-62);
+  --surface-panel: var(--panel-82); --surface-input: var(--white-70);
+  --glass: var(--white-58); --glass-strong: var(--white-84);
+  --glass-edge: var(--white-75); --focus-ring: rgba(156, 166, 255, .8);
+}
+
 button { font: inherit; color: inherit; }
 
 .page { display: flex; flex-direction: column; }
@@ -1088,6 +1131,43 @@ button { font: inherit; color: inherit; }
   background: var(--gradient-action);
   color: var(--ink-inverse);
   box-shadow: var(--shadow-view-toggle-on);
+}
+
+.attention-select, .appearance-menu, .palette-trigger {
+  border: 1px solid var(--glass-edge); border-radius: 999px;
+  background: var(--surface-control); color: var(--ink); font: inherit;
+  font-size: var(--text-control); padding: 8px 12px; min-height: 36px;
+}
+.palette-trigger { cursor: pointer; }
+.appearance-menu { position: relative; padding: 0; }
+.appearance-menu summary { cursor: pointer; list-style: none; padding: 8px 12px; }
+.appearance-menu summary::-webkit-details-marker { display: none; }
+.appearance-menu[open] { border-radius: 15px; }
+.appearance-menu label { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
+.appearance-menu select { background: var(--surface-input); color: var(--ink); border: 1px solid var(--rule); border-radius: 8px; padding: 5px; }
+.light-focus, .recovery { background: var(--glass); border: 1px solid var(--glass-edge); border-left: 4px solid var(--course-color, var(--accent)); border-radius: 20px; padding: 30px; box-shadow: var(--glass-shadow); }
+.light-focus .act, .recovery .act { margin-top: 24px; }
+.light-title { font-size: clamp(25px, 4vw, 36px); line-height: 1.2; margin: 12px 0; }
+.recovery-fact { font-size: var(--text-body-plus); color: var(--ink-soft); margin: 22px 0 0; }
+.recovery-list { margin: 28px 0 16px; border-top: 1px solid var(--rule); padding-top: 18px; }
+.recovery-list summary { cursor: pointer; color: var(--ink-soft); }
+.recovery-row { display: block; width: 100%; text-align: left; border: 0; background: transparent; color: var(--ink); padding: 12px 0; cursor: pointer; border-bottom: 1px solid var(--rule-soft); }
+.deep-surface > .grade-path, .deep-coverage { max-width: 720px; margin: 20px auto 40px; padding: 24px; background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 18px; }
+.deep-coverage h2 { margin: 0 0 8px; font-size: 18px; }
+.deep-coverage p { margin: 0; color: var(--ink-soft); }
+.palette-shade { position: fixed; z-index: 200; inset: 0; background: var(--backdrop-28); display: flex; justify-content: center; align-items: flex-start; padding: min(15vh, 110px) 16px 16px; }
+.palette-panel { width: min(100%, 560px); max-height: min(70vh, 650px); overflow: auto; background: var(--surface-panel); border: 1px solid var(--glass-edge); border-radius: 18px; box-shadow: var(--shadow-detail); padding: 12px; }
+.palette-input { display: block; width: 100%; background: var(--surface-input); color: var(--ink); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; font: inherit; font-size: 16px; }
+.palette-results { margin-top: 8px; }
+.palette-result { display: flex; gap: 12px; justify-content: space-between; width: 100%; padding: 12px; background: none; border: 0; border-radius: 8px; text-align: left; cursor: pointer; }
+.palette-result:hover, .palette-result:focus { background: var(--surface-hover); }
+.palette-result span { color: var(--ink-faint); white-space: nowrap; }
+.palette-empty { padding: 12px; color: var(--ink-faint); }
+@media (max-width: 760px) {
+  .shell-right { flex-wrap: wrap; gap: 8px; }
+  .attention-select, .appearance-menu, .palette-trigger { min-height: 44px; }
+  .light-focus, .recovery { padding: 22px; }
+  .deep-surface > .grade-path, .deep-coverage { margin: 12px 18px 28px; }
 }
 
 /* ================= now view ================= */

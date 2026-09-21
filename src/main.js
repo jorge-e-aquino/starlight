@@ -14,8 +14,19 @@ import { toast } from './toast.js';
 import { initTooltips } from './tooltip.js';
 import * as sync from './sync.js';
 import { recordUsefulMoment, startReminderSync } from './push-client.js';
+import { readPreferences, savePreferences, MODES, GROUNDS, SCHEMES } from './attention.js';
+import { buildGradeSection } from './grade-ui.js';
 
 const app = document.querySelector('#app');
+let preferences = readPreferences();
+function applyAppearance() {
+  document.documentElement.dataset.ground = preferences.ground;
+  document.documentElement.dataset.scheme = preferences.scheme === 'system'
+    ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : preferences.scheme;
+}
+applyAppearance();
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyAppearance);
 
 // Only in a build. Registering in dev would serve yesterday's modules over the
 // dev server's and make edits look like they did nothing.
@@ -49,7 +60,8 @@ const ui = {
   finishedExpanded: false,
   checkinStep: 0,
   awayDismissed: false,
-  firstRunDismissed: false
+  firstRunDismissed: false,
+  paletteOpen: false
 };
 
 function itemFromHash(map) {
@@ -72,6 +84,7 @@ try {
     get awayDismissed() { return ui.awayDismissed; },
     get checkinStep() { return ui.checkinStep; },
     get firstRun() { return firstRun; },
+    get attentionMode() { return preferences.mode; },
     get focusItem() { return pickFocus(map.allItems); },
     get mountAnim() { return anim.mount; },
     get focusChanged() { return anim.focusChanged; },
@@ -124,8 +137,9 @@ try {
     shell.replaceChildren(
       buildMasthead(map, focus),
       ...buildAppStates(),
-      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' ? [] : buildEdgeTargets(ui.view)),
-      surfaceFor(ui.view)
+      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' || (ui.view === 'now' && preferences.mode === 'light') ? [] : buildEdgeTargets(ui.view)),
+      surfaceFor(ui.view),
+      ...(ui.paletteOpen ? [buildPalette(map)] : [])
     );
     if (detail.openItem) {
       const item = detail.openItem;
@@ -174,6 +188,18 @@ try {
     if (view === 'map') return renderMap(map, ctx);
     if (view === 'checkin') return renderCheckin(map, ctx);
     if (view === 'evening') return renderEvening(map, ctx);
+    if (preferences.mode === 'deep') {
+      const deep = document.createElement('div');
+      deep.className = 'deep-surface';
+      deep.append(renderNow(map, ctx));
+      const grade = buildGradeSection(map);
+      deep.append(grade);
+      const coverage = document.createElement('section');
+      coverage.className = 'deep-coverage';
+      coverage.innerHTML = '<h2>Topic coverage</h2><p>Coverage will appear as exam topics are added.</p>';
+      deep.append(coverage, renderMap(map, ctx));
+      return deep;
+    }
     return renderNow(map, ctx);
   }
 
@@ -247,9 +273,66 @@ try {
     checkin.textContent = 'Check in';
     checkin.addEventListener('click', () => { ui.checkinStep = 0; setView('checkin'); });
 
-    right.append(status, checkin, toggle);
+    const mode = document.createElement('select');
+    mode.className = 'attention-select';
+    mode.setAttribute('aria-label', 'Attention mode');
+    MODES.forEach((value) => mode.append(new Option(`${value[0].toUpperCase()}${value.slice(1)} mode`, value)));
+    mode.value = preferences.mode;
+    mode.addEventListener('change', () => {
+      preferences = savePreferences({ ...preferences, mode: mode.value });
+      ui.queueExpanded = false; ui.pastExpanded = false; ui.finishedExpanded = false;
+      setView('now');
+    });
+
+    const appearance = document.createElement('details');
+    appearance.className = 'appearance-menu';
+    appearance.append(Object.assign(document.createElement('summary'), { textContent: 'Appearance' }));
+    for (const [label, key, values] of [['Ground', 'ground', GROUNDS], ['Light', 'scheme', SCHEMES]]) {
+      const field = document.createElement('label');
+      field.textContent = label;
+      const select = document.createElement('select');
+      select.setAttribute('aria-label', label === 'Light' ? 'Color scheme' : label);
+      values.forEach((value) => select.append(new Option(value[0].toUpperCase() + value.slice(1), value)));
+      select.value = preferences[key];
+      select.addEventListener('change', () => { preferences = savePreferences({ ...preferences, [key]: select.value }); applyAppearance(); });
+      field.append(select); appearance.append(field);
+    }
+    const jump = document.createElement('button');
+    jump.className = 'palette-trigger'; jump.textContent = 'Jump';
+    jump.setAttribute('aria-label', 'Jump to an item or surface');
+    jump.addEventListener('click', () => { ui.paletteOpen = true; paint(); shell.querySelector('.palette-input')?.focus(); });
+
+    right.append(status, checkin, toggle, mode, appearance, jump);
     head.append(left, right);
     return head;
+  }
+
+  function buildPalette(map) {
+    const shade = document.createElement('div'); shade.className = 'palette-shade';
+    shade.addEventListener('click', (event) => { if (event.target === shade) { ui.paletteOpen = false; paint(); } });
+    const panel = document.createElement('section'); panel.className = 'palette-panel';
+    panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Jump to');
+    const input = document.createElement('input'); input.className = 'palette-input';
+    input.type = 'search'; input.placeholder = 'Find an item or surface';
+    const results = document.createElement('div'); results.className = 'palette-results';
+    const entries = [
+      ...[['now', 'Now'], ['plan', 'Plan'], ['field', 'Field'], ['map', 'Map'], ['checkin', 'Check in'], ['evening', 'Evening']].map(([id, label]) => ({ label, sub: 'Surface', run: () => setView(id) })),
+      ...map.allItems.map((item) => ({ label: item.title, sub: map.courseById.get(item.courseId)?.code || '', run: () => { ui.paletteOpen = false; ctx.openDetail(item, null, { silent: true }); } }))
+    ];
+    function show() {
+      const q = input.value.trim().toLowerCase(); results.replaceChildren();
+      const found = entries.filter((entry) => `${entry.label} ${entry.sub}`.toLowerCase().includes(q)).slice(0, 12);
+      if (!found.length) results.append(Object.assign(document.createElement('p'), { className: 'palette-empty', textContent: 'No matching items.' }));
+      found.forEach((entry) => {
+        const button = document.createElement('button'); button.className = 'palette-result';
+        button.append(Object.assign(document.createElement('strong'), { textContent: entry.label }), Object.assign(document.createElement('span'), { textContent: entry.sub }));
+        button.addEventListener('click', () => { ui.paletteOpen = false; entry.run(); paint(); });
+        results.append(button);
+      });
+    }
+    input.addEventListener('input', show);
+    input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); results.querySelector('button')?.click(); } });
+    panel.append(input, results); shade.append(panel); show(); return shade;
   }
 
   /**
@@ -296,6 +379,10 @@ try {
 
   initTooltips();
   paint();
+  window.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); ui.paletteOpen = !ui.paletteOpen; paint(); if (ui.paletteOpen) shell.querySelector('.palette-input')?.focus(); }
+    if (event.key === 'Escape' && ui.paletteOpen) { ui.paletteOpen = false; paint(); }
+  });
   window.addEventListener('online', () => paint());
   window.addEventListener('offline', () => paint());
 

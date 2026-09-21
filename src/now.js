@@ -19,6 +19,7 @@ import { dueTodayItems } from './schedule.js';
 import { dateBadge, resolutionLabel } from './truth-ui.js';
 import * as store from './state.js';
 import { buildSyncStatus } from './syncui.js';
+import { recoveryChoice } from './attention.js';
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -48,6 +49,7 @@ export function renderNow(map, ctx) {
   const now = today();
   const items = map.allItems;
   const root = el('div', 'now');
+  root.dataset.mode = ctx.attentionMode || 'full';
   if (ctx.mountAnim) root.classList.add('mounting');
 
   const away = awayReport(items, ctx.lastVisit, now);
@@ -56,6 +58,17 @@ export function renderNow(map, ctx) {
   const focus = pickFocus(items, now);
   const live = liveItems(items, now);
   const past = overdueItems(items, now);
+
+  const recovery = recoveryChoice(past.map((item) => ({ ...item, resolution: store.itemState(item.id).resolution })), ctx.lastVisit, now);
+  if (recovery && !ctx.awayDismissed) {
+    root.append(buildRecovery(recovery, map, ctx, now), buildBackup(ctx));
+    return root;
+  }
+
+  if (ctx.attentionMode === 'light') {
+    root.append(focus ? buildLightFocus(focus, map, ctx, now) : buildClear(items, map, ctx, now));
+    return root;
+  }
 
   root.append(focus ? buildFocus(focus, items, map, ctx, now) : buildClear(items, map, ctx, now));
 
@@ -95,6 +108,45 @@ export function renderNow(map, ctx) {
 
   root.append(buildBackup(ctx));
   return root;
+}
+
+function buildLightFocus(item, map, ctx, now) {
+  const course = map.courseById.get(item.courseId);
+  const state = store.itemState(item.id);
+  const card = el('section', 'light-focus');
+  card.style.setProperty('--course-color', course.color);
+  card.append(el('p', 'focus-eyebrow', 'One thing for now'));
+  card.append(el('h2', 'light-title', item.title));
+  card.append(el('p', 'focus-meta', `${course.code} · ${dueLabel(item, now)}`));
+  card.append(dateBadge(item));
+  const action = el('button', 'act primary', state.externalBlock ? 'See what is blocking it' : state.startedAt ? 'Continue' : 'Open item');
+  action.addEventListener('click', () => ctx.openDetail(item));
+  card.append(action);
+  return card;
+}
+
+function buildRecovery(recovery, map, ctx, now) {
+  const card = el('section', 'recovery');
+  const { chosen, rest, knownRecoverable } = recovery;
+  card.append(el('p', 'focus-eyebrow', 'Pick up here'));
+  card.append(el('h2', 'light-title', chosen.title));
+  card.append(el('p', 'focus-meta', `${map.courseById.get(chosen.courseId).code} · ${dueLabel(chosen, now)}`));
+  card.append(el('p', 'recovery-fact', 'Resolving the missed work is the work today.'));
+  const action = el('button', 'act primary', knownRecoverable ? 'Open recoverable item' : 'Check whether this can be recovered');
+  action.addEventListener('click', () => ctx.openDetail(chosen));
+  card.append(action);
+  const list = el('details', 'recovery-list');
+  list.append(el('summary', null, `Other items to resolve (${rest.length})`));
+  rest.forEach((item) => {
+    const button = el('button', 'recovery-row', `${map.courseById.get(item.courseId).code} · ${item.title}`);
+    button.addEventListener('click', () => ctx.openDetail(item));
+    list.append(button);
+  });
+  card.append(list);
+  const dismiss = el('button', 'linky', 'Return to Now');
+  dismiss.addEventListener('click', ctx.dismissAway);
+  card.append(dismiss);
+  return card;
 }
 
 /**

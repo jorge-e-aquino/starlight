@@ -220,3 +220,32 @@ re-exported with 79 data values preserved (the export timestamp refreshes).
 The Field surface was inspected on desktop and at 390 px, including first-run,
 empty, form-error, offline, storage-error, and loading states. The no-reply
 follow-up was entered and saved in an isolated browser profile.
+
+## Phase 6: Attention
+
+Light, Full, and Deep are device-local modes stored in `starlight.attention.v1`,
+outside the progress overlay and sync. Light presents one item and one action;
+Full keeps the existing Now surface; Deep includes Now, the grade path, a
+topic coverage slot, and the map. The slot reports that coverage awaits exam
+topics from Phase 8 instead of inventing confidence data. Expanded queues and
+disclosures remain session-only. `src/attention.js` keeps preference validation
+and recovery selection pure.
+
+After two days away with several unresolved overdue items, recovery selects a
+known late-eligible or makeup-possible item first. When recovery is unknown,
+the action asks the user to check rather than claiming that submission is
+possible. The rest live in one expandable list. The factual sentence is
+"Resolving the missed work is the work today."
+
+Grounds use the existing color token layer: lavender, warm paper, and slate.
+The light scheme can follow the system or be chosen explicitly; dark surfaces
+have their own colors. The Jump control and Command/Ctrl-K palette search all
+surfaces and items with course codes. No overlay fields were added in this
+phase. Preferences cannot be included in a progress export or remote sync.
+
+Checks: nine test suites pass; build clean; the personal backup was loaded and
+re-exported with all 79 data values preserved. Desktop Full/Light/Deep and
+phone Full/Light were opened and visually reviewed, including warm light and
+dark appearances. The isolated browser fixture showed loading, empty, read
+error, offline, and first-run states. The recovery selector was tested with
+known and unknown recoverability.
