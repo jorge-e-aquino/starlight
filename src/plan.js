@@ -10,12 +10,12 @@ import {
   hasDueTime,
   sameDay,
   nextDueItem,
-  DEFAULT_DUE_TIME,
   POMODORO,
   POMOFOCUS_URL,
   pomodorosFor,
   EFFORT_MINUTES
 } from './schedule.js';
+import { dateBadge, dateText } from './truth-ui.js';
 import { effortBand, EFFORT, completionVerb, daysUntil, effectiveStatus } from './signals.js';
 import * as store from './state.js';
 
@@ -209,9 +209,9 @@ function buildHead(plan, map, ctx) {
   const verdict = el('p', plan.fits ? 'plan-verdict ok' : 'plan-verdict over');
   if (plan.fits) {
     const last = plan.lastDeadline;
-    verdict.textContent = last
-      ? `That lands before ${formatTime(last)}, so everything makes its deadline.`
-      : 'Everything fits in the day ahead.';
+    verdict.textContent = plan.assumedTimes
+      ? last ? `Work with known times fits before ${formatTime(last)}. Other due times need checking.` : 'Due times are unknown. Check them before relying on this plan.'
+      : `That lands before ${formatTime(last)}, so everything makes its deadline.`;
   } else {
     const worst = plan.overflow[0];
     const names = plan.overflow.map((r) => r.item.title).join(', ');
@@ -583,13 +583,12 @@ function buildDue(item, at) {
   const chip = el('div', 'block-due');
   const isToday = sameDay(item.dateObj, at);
   chip.append(el('span', 'due-word', 'due'));
+  chip.append(dateBadge(item));
 
   if (isToday) {
-    chip.append(el('span', 'due-time', formatDueTime(item)));
-    if (!hasDueTime(item)) chip.dataset.assumed = 'true';
-    chip.title = hasDueTime(item)
-      ? 'Due time you set on this item'
-      : 'Assumed. The syllabus gives a date but no time; set one on the item to change this.';
+    chip.append(el('span', 'due-time', formatDueTime(item) || 'time unknown'));
+    if (!hasDueTime(item)) chip.dataset.unknown = 'true';
+    chip.title = dateText(item);
     return chip;
   }
 
@@ -599,7 +598,7 @@ function buildDue(item, at) {
       ? item.dateObj.toLocaleDateString('en-US', { weekday: 'short' })
       : item.dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   chip.append(el('span', 'due-time', label));
-  chip.title = `Due ${item.dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`;
+  chip.title = dateText(item);
   return chip;
 }
 
@@ -733,17 +732,8 @@ function buildAssumption(plan) {
   return el(
     'p',
     'plan-fine',
-    `Some of these have no confirmed due time and are treated as due at ${labelFor(
-      DEFAULT_DUE_TIME
-    )}. Open an item to set the real one; the plan re-flows around it.`
+    'Some due times are unknown. Open an item to check its time before relying on this plan.'
   );
-}
-
-function labelFor(hhmm) {
-  const [h, m] = hhmm.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return formatClock(d);
 }
 
 function buildClear(map, plan) {

@@ -1,5 +1,7 @@
 import schema from '../course_map_schema_v2.json';
 import { ENABLED_COURSES } from './config.js';
+import { itemState } from './state.js';
+import { validatePrerequisites } from './truth.js';
 
 // Parse a YYYY-MM-DD string at local noon so day arithmetic never trips over
 // timezone offsets or DST.
@@ -31,10 +33,14 @@ function tieWeight(item) {
 function normalizeItem(item, course, index) {
   return {
     ...item,
+    schemaDate: item.date,
+    schemaTime: item.time,
+    get date() { const choice = itemState(item.id).dateTrust; return choice ? choice.date || null : item.date; },
+    get time() { const choice = itemState(item.id).dateTrust; return choice ? choice.time || null : item.time; },
     courseId: course.id,
     courseCode: course.code,
     courseColor: course.color,
-    dateObj: parseDate(item.date),
+    get dateObj() { return parseDate(this.date); },
     confirmed: item.confirmed !== false,
     points: item.points ?? null,
     weightPercent: item.weightPercent ?? null,
@@ -57,8 +63,8 @@ function normalizeCourse(course) {
     standing: items.filter((it) => it.type === 'standing'),
     // Everything with a date lands on the timeline; the rest goes to the
     // unscheduled shelf at the right edge.
-    dated: items.filter((it) => it.type !== 'standing' && it.dateObj),
-    undated: items.filter((it) => it.type !== 'standing' && !it.dateObj),
+    get dated() { return items.filter((it) => it.type !== 'standing' && it.dateObj); },
+    get undated() { return items.filter((it) => it.type !== 'standing' && !it.dateObj); },
     progress: {
       doneCount: done.length,
       totalCount: scored.length,
@@ -103,11 +109,14 @@ export function loadMap() {
     endObj: parseDate(z.end)
   }));
 
+  const allItems = courses.flatMap(c => c.items);
+  validatePrerequisites(allItems);
+  allItems.forEach(item => Object.defineProperty(item, 'semesterItems', { value: allItems }));
   return {
     lastUpdated: parseDate((schema.lastUpdated || '').slice(0, 10)),
     courses,
     crunchZones,
-    allItems: courses.flatMap((c) => c.items),
+    allItems,
     courseById: new Map(courses.map((c) => [c.id, c])),
     allCourseCount: schema.courses.length
   };

@@ -15,7 +15,8 @@ import {
   completionVerb,
   effectiveStatus
 } from './signals.js';
-import { dueTodayItems, buildDayPlan, humanMinutes } from './schedule.js';
+import { dueTodayItems } from './schedule.js';
+import { dateBadge, resolutionLabel } from './truth-ui.js';
 import * as store from './state.js';
 import { buildSyncStatus } from './syncui.js';
 
@@ -102,15 +103,11 @@ export function renderNow(map, ctx) {
  * rather than the version itself.
  */
 function buildPlanLink(dueToday, items, ctx) {
-  const plan = buildDayPlan(items);
   const wrap = el('p', 'plan-link');
-  const n = dueToday.length;
   const btn = el('button', 'linky', 'Plan the day by the hour');
   btn.addEventListener('click', ctx.openPlan);
   wrap.append(
-    document.createTextNode(
-      `${n} ${n === 1 ? 'thing is' : 'things are'} due today, about ${humanMinutes(plan.workMinutes)} of work. `
-    ),
+    document.createTextNode('Deadlines land today. '),
     btn
   );
   return wrap;
@@ -165,6 +162,7 @@ function buildFocus(item, items, map, ctx, now) {
   body.append(
     el('div', 'focus-meta', `${course.code} · ${reason.when} · ${band.label.toLowerCase()}, about ${band.hint}`)
   );
+  body.append(dateBadge(item));
   body.append(el('div', 'focus-why', reason.why));
 
   const step = state.firstStep;
@@ -192,7 +190,7 @@ function buildClear(items, map, ctx, now) {
 
   if (deferred.length) {
     // Honest about why the surface is empty: this is a choice, not a clear deck.
-    body.append(el('h2', 'clear-title', `Set aside until tomorrow (${deferred.length}).`));
+    body.append(el('h2', 'clear-title', 'Set aside until tomorrow.'));
     body.append(el('p', 'clear-sub', 'Nothing else is in range. These come back on their own.'));
     const actions = el('div', 'actions');
     const back = el('button', 'act', 'Bring them back');
@@ -299,7 +297,7 @@ function buildQueue(rest, map, ctx, now) {
   const section = el('section', 'queue');
   const visible = ctx.queueExpanded ? rest : rest.slice(0, 3);
 
-  section.append(el('h3', 'section-head', `Also in range (${rest.length})`));
+  section.append(el('h3', 'section-head', 'Also in range'));
 
   visible.forEach((item, i) => {
     const row = buildRow(item, map, ctx, now);
@@ -328,6 +326,7 @@ function buildRow(item, map, ctx, now) {
     el('span', 'row-title', item.title),
     el('span', 'row-meta', `${course.code} · ${dueLabel(item, now)} · ${band.label.toLowerCase()}`)
   );
+  main.append(dateBadge(item));
   main.addEventListener('click', () => ctx.openDetail(item));
 
   row.append(dot, main, buildActions(item, ctx, { compact: true }));
@@ -340,7 +339,7 @@ function buildStillOpen(past, map, ctx, now) {
   const section = el('section', 'still-open');
   const toggle = el('button', 'section-head toggle');
   toggle.append(
-    el('span', null, `Still open (${past.length})`),
+    el('span', null, 'Still open'),
     el('span', 'caret', ctx.pastExpanded ? '▾' : '▸')
   );
   toggle.addEventListener('click', ctx.togglePast);
@@ -363,6 +362,21 @@ function buildActions(item, ctx, { primary = false, compact = false } = {}) {
     const undo = el('button', 'act ghost', 'Undo');
     undo.addEventListener('click', () => ctx.act(() => store.clearProgress(item.id)));
     wrap.append(el('span', 'act-done', `${completionVerb(item)} ✓`), undo);
+    return wrap;
+  }
+
+  // The verb set tells the truth on every surface. Stopped work and resolved
+  // misses carry their situation instead of a Start and Submitted pair.
+  if (state.externalBlock) {
+    const blocked = el('button', compact ? 'linky' : 'act ghost', 'Blocked externally');
+    blocked.addEventListener('click', () => ctx.openDetail(item));
+    wrap.append(blocked);
+    return wrap;
+  }
+
+  const resolved = state.resolution?.state;
+  if (resolved === 'cant-submit' || resolved === 'absorbed') {
+    wrap.append(el('span', 'act-done', resolutionLabel(resolved)));
     return wrap;
   }
 

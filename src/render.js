@@ -2,6 +2,9 @@ import { LANE_HEIGHT, PX_PER_DAY, GUTTER } from './config.js';
 import { formatDate } from './data.js';
 import { today } from './clock.js';
 import { phase, effectiveStatus, presence } from './signals.js';
+import { dateTrust } from './truth.js';
+import { dateText, resolutionLabel } from './truth-ui.js';
+import * as store from './state.js';
 import { buildScale, buildAxis, buildLanes, nodeRadius } from './layout.js';
 
 function el(tag, className, text) {
@@ -165,7 +168,7 @@ function buildStandingBand(item, course, ctx) {
       : item.points != null
         ? `${item.points} pts`
         : 'ongoing';
-  band.append(pulse, el('span', 'st-title', item.title), el('span', 'st-meta', `${meta} · runs all semester`));
+  band.append(pulse, el('span', 'st-title', `${course.code} · ${item.title}`), el('span', 'st-meta', `${meta} · runs all semester`));
   band.addEventListener('click', () => ctx.openDetail(item));
   return band;
 }
@@ -214,6 +217,8 @@ function buildNode(item, course, scale, ctx, now) {
   const isFocus = ctx.focusItem && ctx.focusItem.id === item.id;
   const heavy = item.type === 'exam' || item.type === 'final';
   const where = phase(item, now);
+  const trust = dateTrust(item, store.snapshot());
+  const progress = store.itemState(item.id);
 
   const btn = el('button', 'node');
   btn.dataset.itemId = item.id;
@@ -221,7 +226,10 @@ function buildNode(item, course, scale, ctx, now) {
   // Distance from actionable is the primary visual variable now, not points.
   btn.dataset.phase = where;
   btn.style.setProperty('--presence', presence(item, now));
-  btn.dataset.unconfirmed = String(!item.confirmed);
+  btn.dataset.trust = trust.status;
+  btn.dataset.resolution = progress.resolution?.state || '';
+  btn.dataset.blocked = String(Boolean(progress.externalBlock));
+  btn.dataset.prerequisite = String(Boolean(item.blocks?.length));
   btn.dataset.tier = heavy ? 'heavy' : 'light';
   btn.style.color = course.color;
   btn.style.left = `${scale.x(item.dateObj)}px`;
@@ -229,12 +237,14 @@ function buildNode(item, course, scale, ctx, now) {
   if (isFocus) btn.classList.add('is-next');
 
   const label = [
-    item.title,
-    formatDate(item.dateObj),
+    `${course.code} · ${item.title}`,
+    dateText(item),
     item.points != null ? `${item.points} pts` : null,
     effectiveStatus(item),
     where === 'live' ? 'in range' : where === 'overdue' ? 'past its date' : null,
-    item.confirmed ? null : 'not confirmed'
+    progress.resolution ? resolutionLabel(progress.resolution) : null,
+    progress.externalBlock ? `Blocked: waiting on ${progress.externalBlock.waitingOn}` : null,
+    item.blocks?.length ? `Unlocks ${item.blocks.map(edge => (item.semesterItems || []).find(candidate => candidate.id === edge.itemId)?.title || edge.itemId).join(', ')}` : null
   ]
     .filter(Boolean)
     .join(', ');
@@ -242,8 +252,8 @@ function buildNode(item, course, scale, ctx, now) {
 
   // Hover label. No `title` attribute: the native tooltip is slow and would
   // stack a second box on top of this one.
-  btn.dataset.tipTitle = item.title;
-  btn.dataset.tipMeta = `${course.code} · ${formatDate(item.dateObj)}`;
+  btn.dataset.tipTitle = `${course.code} · ${item.title}`;
+  btn.dataset.tipMeta = [dateText(item), progress.resolution ? resolutionLabel(progress.resolution) : null, progress.externalBlock ? 'Externally blocked' : null, item.blocks?.length ? 'Prerequisite' : null].filter(Boolean).join(' · ');
 
   if (isFocus) btn.append(el('span', 'bloom'));
 
@@ -281,7 +291,8 @@ function buildShelf(course, scale, ctx) {
     const chip = el('button', 'chip');
     chip.dataset.itemId = item.id;
     chip.style.color = course.color;
-    chip.append(el('span', 'cdot'), el('span', null, item.title));
+    chip.append(el('span', 'cdot'), el('span', null, `${course.code} · ${item.title}`));
+    chip.setAttribute('aria-label', `${course.code} · ${item.title} · ${dateText(item)}`);
     chip.addEventListener('click', () => ctx.openDetail(item, chip));
     shelf.append(chip);
   });
@@ -294,7 +305,8 @@ function buildLegend() {
     ['k', 8, 'In range'],
     ['k out', 8, 'Not yet in range'],
     ['k filled', 8, 'Done'],
-    ['k dashed', 8, 'Not confirmed'],
+    ['k dashed', 8, 'Date unchecked'],
+    ['k conflict', 8, 'Sources disagree'],
     ['orb', 13, 'Start here']
   ];
   rows.forEach(([cls, size, text]) => {

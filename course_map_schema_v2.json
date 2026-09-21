@@ -5,7 +5,7 @@
       "label": "Fall Crunch",
       "start": "2026-09-21",
       "end": "2026-10-26",
-      "note": "OB Test 1 (9/21), MGT2250 Test 1 (9/24), ECON Midterm 1 (10/2), Business Lab checkpoint (10/21), MGT2250 Test 2 (10/22), OB Test 2 (10/26) \u2014 six major events, ~5 weeks"
+      "note": "OB Test 1 (9/21), MGT2250 Test 1 (9/24), ECON Midterm 1 (10/2), Business Lab checkpoint (10/21), MGT2250 Test 2 (10/22), OB Test 2 (10/26) — six major events, ~5 weeks"
     }
   ],
   "courses": [
@@ -21,7 +21,7 @@
           "label": "Homework",
           "countRequired": 11,
           "countTotal": 12,
-          "note": "Best 11 of 12 count \u2014 NOT used to deprioritize any single HW"
+          "note": "Best 11 of 12 count — NOT used to deprioritize any single HW"
         },
         {
           "id": "mgt2250-weekly",
@@ -35,7 +35,7 @@
           "label": "Tests",
           "countRequired": 3,
           "countTotal": 3,
-          "note": "Lowest replaced by average of all 3 \u2014 every test still must be fully prepared for"
+          "note": "Lowest replaced by average of all 3 — every test still must be fully prepared for"
         }
       ],
       "items": [
@@ -389,7 +389,24 @@
           "confirmed": true,
           "steps": null,
           "notes": "Drop-lowest cushion exists but does NOT reduce urgency to prepare",
-          "timeConfirmed": false
+          "timeConfirmed": false,
+          "dateEvidence": {
+            "status": "contradicted",
+            "sources": [
+              {
+                "source": "Canvas recorded September 7",
+                "date": "2026-09-24",
+                "time": "18:10",
+                "note": "Available from 17:00; user has not verified this record."
+              },
+              {
+                "source": "Current semester schema",
+                "date": "2026-09-24",
+                "time": null,
+                "note": "Time remains unknown."
+              }
+            ]
+          }
         },
         {
           "id": "mgt2250-test2",
@@ -448,13 +465,13 @@
           "id": "econ-coursework",
           "label": "Coursework",
           "consistencySignal": true,
-          "note": "~63% of grade from ~34+ small items \u2014 treat consistency across this group as priority, not any single item's tiny share"
+          "note": "~63% of grade from ~34+ small items — treat consistency across this group as priority, not any single item's tiny share"
         },
         {
           "id": "econ-exams",
           "label": "Midterms + Final",
           "consistencySignal": false,
-          "note": "UNRESOLVED \u2014 needs instructor confirmation. The syllabus states the midterms total 100 points, but the posted values are Midterm 1: 50 pts and Midterm 2: 75 pts, which is 125. The discrepancy is unexplained and the real weighting is unknown. Final exam not yet listed on the Assignments page as of 8/31."
+          "note": "UNRESOLVED — needs instructor confirmation. The syllabus states the midterms total 100 points, but the posted values are Midterm 1: 50 pts and Midterm 2: 75 pts, which is 125. The discrepancy is unexplained and the real weighting is unknown. Final exam not yet listed on the Assignments page as of 8/31."
         }
       ],
       "items": [
@@ -924,7 +941,21 @@
           "status": "upcoming",
           "confirmed": true,
           "steps": null,
-          "notes": "Required setup, not just a normal assignment"
+          "notes": "Required setup, not just a normal assignment",
+          "blocks": [
+            {
+              "itemId": "econ-midterm1",
+              "leadDays": 3
+            },
+            {
+              "itemId": "econ-midterm2",
+              "leadDays": 3
+            },
+            {
+              "itemId": "econ-final",
+              "leadDays": 3
+            }
+          ]
         },
         {
           "id": "econ-midterm1",
@@ -963,7 +994,7 @@
           "status": "upcoming",
           "confirmed": false,
           "steps": null,
-          "notes": "Listed in syllabus (17% of grade) but not yet posted to Assignments page as of 8/31 \u2014 check GT final exam schedule"
+          "notes": "Listed in syllabus (17% of grade) but not yet posted to Assignments page as of 8/31 — check GT final exam schedule"
         }
       ]
     },
@@ -979,14 +1010,16 @@
           "label": "Journals",
           "countRequired": 8,
           "countTotal": 10,
-          "note": "Submit 8 of 10, 25pts pass/1pt nonpass \u2014 drop cushion does NOT reduce urgency of any single journal. Cannot submit for a class you didn't attend (falsifying attendance)."
+          "note": "Submit 8 of 10, 25pts pass/1pt nonpass — drop cushion does NOT reduce urgency of any single journal. Cannot submit for a class you didn't attend (falsifying attendance).",
+          "pointsPerItem": 25
         },
         {
           "id": "ob-memos",
           "label": "Case Memos",
           "countRequired": 6,
           "countTotal": 7,
-          "note": "Submit 6 of 7 (presenting counts as one), 25pts pass/1pt nonpass \u2014 same no-deprioritize rule. ~500 words / one page required for a pass."
+          "note": "Submit 6 of 7 (presenting counts as one), 25pts pass/1pt nonpass — same no-deprioritize rule. ~500 words / one page required for a pass.",
+          "pointsPerItem": 25
         },
         {
           "id": "ob-tests",
@@ -1138,7 +1171,7 @@
           "status": "done",
           "confirmed": true,
           "steps": null,
-          "notes": "Introduce Yourself \u2014 resubmitted per professor's permission"
+          "notes": "Introduce Yourself — resubmitted per professor's permission"
         },
         {
           "id": "ob-memo2",
@@ -1255,7 +1288,22 @@
           "status": "upcoming",
           "confirmed": true,
           "steps": null,
-          "notes": "Section E: 11:30am-12:30pm. If actually Section D, this moves to 12/16 9:30-10:30am"
+          "notes": "Section E: 11:30am-12:30pm. If actually Section D, this moves to 12/16 9:30-10:30am",
+          "dateEvidence": {
+            "status": "contradicted",
+            "sources": [
+              {
+                "source": "Syllabus section E",
+                "date": "2026-12-11",
+                "time": "11:30"
+              },
+              {
+                "source": "Syllabus section D",
+                "date": "2026-12-16",
+                "time": "09:30"
+              }
+            ]
+          }
         },
         {
           "id": "ob-proposal",
@@ -1294,7 +1342,7 @@
           "status": "upcoming",
           "confirmed": true,
           "steps": null,
-          "notes": "Spread across 11/18, 11/23, 11/30, 12/2 \u2014 exact day for your team TBD",
+          "notes": "Spread across 11/18, 11/23, 11/30, 12/2 — exact day for your team TBD",
           "timeConfirmed": false
         },
         {
@@ -1308,7 +1356,7 @@
           "status": "upcoming",
           "confirmed": false,
           "steps": null,
-          "notes": "Team-based, 100pts (10% of grade) \u2014 date depends on which case your team is assigned"
+          "notes": "Team-based, 100pts (10% of grade) — date depends on which case your team is assigned"
         },
         {
           "id": "ob-research",
@@ -1321,7 +1369,7 @@
           "status": "upcoming",
           "confirmed": false,
           "steps": null,
-          "notes": "Listed as undated on Canvas Assignments \u2014 confirm requirements"
+          "notes": "Listed as undated on Canvas Assignments — confirm requirements"
         },
         {
           "id": "ob-extracredit",
@@ -1349,7 +1397,7 @@
           "id": "biz-updates",
           "label": "Weekly Team Updates",
           "consistencySignal": true,
-          "note": "40% of grade across 10 Wednesdays \u2014 team-based, missing one affects teammates too"
+          "note": "40% of grade across 10 Wednesdays — team-based, missing one affects teammates too"
         }
       ],
       "items": [

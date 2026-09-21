@@ -92,10 +92,12 @@ export function recordFocusDay(id, at = new Date()) {
 }
 
 export function markStarted(id, at = Date.now()) {
+  if (itemState(id).externalBlock || ['cant-submit', 'absorbed'].includes(itemState(id).resolution?.state)) return;
   patch(id, { startedAt: at, snoozeUntil: null });
 }
 
 export function markDone(id, at = Date.now()) {
+  if (itemState(id).externalBlock || ['cant-submit', 'absorbed'].includes(itemState(id).resolution?.state)) return;
   patch(id, { doneAt: at, startedAt: itemState(id).startedAt || at, snoozeUntil: null });
 }
 
@@ -129,10 +131,52 @@ export function setEffort(id, band) {
   patch(id, { effort: band || null });
 }
 
-// The schema carries dates but no times. The day plan needs a moment, so an
-// unset item is assumed due at the end of its day; this is the correction.
+// A user-entered time can refine the schedule. An unset time remains unknown;
+// the day plan must never infer a course deadline from another course.
 export function setDueTime(id, hhmm) {
   patch(id, { dueTime: /^\d{1,2}:\d{2}$/.test(hhmm || '') ? hhmm : null });
+}
+
+function validDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export function setDateTrust(id, value) {
+  if (value === null) return patch(id, { dateTrust: null });
+  if (!['unverified', 'verified', 'contradicted'].includes(value?.status)) throw new Error('Choose a date state.');
+  if (value.date && !validDate(value.date)) throw new Error('Enter a real calendar date.');
+  if (value.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time)) throw new Error('Enter a valid time.');
+  if (value.status === 'verified' && (!value.date || !value.source?.trim())) throw new Error('Name the source you checked and enter its date.');
+  if (value.status === 'contradicted') {
+    const sources = value.sources || [];
+    if (sources.length < 2 || sources.some(s => !s.source?.trim() || (s.date && !validDate(s.date)) || (s.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(s.time)))) {
+      throw new Error('Record both sources and their dates or times.');
+    }
+    if (new Set(sources.map(s => `${s.date || ''}/${s.time || ''}`)).size < 2) throw new Error('The sources agree. Keep this unchecked until you confirm it.');
+  }
+  patch(id, { dateTrust: structuredClone(value) });
+}
+
+export function setResolution(id, value) {
+  // A recorded outcome may be corrected, but it must never quietly return a
+  // written-off item to the actionable queue.
+  if (value === null) throw new Error('Choose a corrected outcome instead of reopening this item.');
+  if (!['late-eligible', 'makeup-possible', 'absorbed', 'cant-submit'].includes(value?.state)) throw new Error('Choose what happened to this item.');
+  if (value.state === 'late-eligible' && (!Number.isFinite(value.penaltyPercent) || value.penaltyPercent < 0 || value.penaltyPercent > 100)) throw new Error('Enter the late penalty from 0 to 100 percent.');
+  if (value.state === 'makeup-possible' && (!value.request?.trim() || !validDate(value.deadline))) throw new Error('Record the request and its deadline.');
+  if (value.deadline && !validDate(value.deadline)) throw new Error('Enter a real deadline.');
+  if (value.state === 'absorbed' && !value.cushionGroupId) throw new Error('Choose the group whose cushion covers this item.');
+  patch(id, { resolution: structuredClone(value) });
+}
+
+export function setExternalBlock(id, value) {
+  if (value === null) return patch(id, { externalBlock: null });
+  if (!value?.reason?.trim() || !value?.waitingOn?.trim() || !validDate(value.followUp)) {
+    throw new Error('Record what stopped you, what you are waiting on, and a follow-up date.');
+  }
+  patch(id, { externalBlock: structuredClone(value) });
 }
 
 /**

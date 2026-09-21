@@ -1,5 +1,7 @@
 import { today } from './clock.js';
-import { itemState, isSnoozed } from './state.js';
+import { itemState, isSnoozed, onWrite, snapshot } from './state.js';
+import { parseDate } from './data.js';
+import { avoidance as baseAvoidance, prerequisiteProjection } from './truth.js';
 
 export const DAY_MS = 86400000;
 
@@ -63,9 +65,23 @@ export function completionVerb(item) {
 export function phase(item, now = today()) {
   if (item.type === 'standing') return 'standing';
   if (isDone(item)) return 'done';
+  // A recorded outcome is an exit from Still open, not a completion. Resolved
+  // misses are reported once through their outcome and never again as overdue.
+  const resolved = itemState(item.id).resolution?.state;
+  if (resolved === 'absorbed' || resolved === 'cant-submit') return 'resolved';
   if (!item.dateObj) return 'undated';
   const left = daysUntil(item.dateObj, now);
-  if (left < 0) return 'overdue';
+  if (left < 0) {
+    const followUp = itemState(item.id).externalBlock?.followUp;
+    if (followUp && parseDate(followUp) > now) return 'overdue';
+    const linked = item.blocks?.some(edge => {
+      const target = item.semesterItems?.find(candidate => candidate.id === edge.itemId);
+      if (!target?.dateObj || isDone(target)) return false;
+      const until = daysUntil(target.dateObj, now);
+      return until >= 0 && until <= effortBand(target).lead;
+    });
+    return linked ? 'live' : 'overdue';
+  }
   return left <= effortBand(item).lead ? 'live' : 'ahead';
 }
 
@@ -87,15 +103,55 @@ function stakesScore(item) {
   return (item.points ?? 0) >= 25 ? 5 : 0;
 }
 
+// Prerequisites, projected once per item list per day and invalidated whenever
+// the overlay writes. A prerequisite inherits the urgency of everything it
+// unlocks, transitive, and must fit before its own deadline by the lead time on
+// each edge, so gating work surfaces days early instead of on the day.
+let prereqCache = { items: null, day: '', map: null };
+onWrite(() => { prereqCache.map = null; });
+
+function projection(items, now) {
+  const day = now.toDateString();
+  if (prereqCache.map && prereqCache.items === items && prereqCache.day === day) return prereqCache.map;
+  prereqCache = {
+    items,
+    day,
+    map: prerequisiteProjection(items, snapshot(), (it, at) =>
+      urgencyScore(daysUntil(it.dateObj, at)) + stakesScore(it), now)
+  };
+  return prereqCache.map;
+}
+
+function projected(item, now = today()) {
+  const all = item.semesterItems || [item];
+  return projection(all, now).get(item.id) || null;
+}
+
+/** The item's own date, or the earliest lead date an unmet gate imposes. */
+export function effectiveDate(item, now = today()) {
+  const p = projected(item, now);
+  return p?.deadline ? parseDate(p.deadline) : item.dateObj;
+}
+
+/** True while an unmet prerequisite stands between this item and starting. */
+export function gatedBy(item, now = today()) {
+  return projected(item, now).unmet || [];
+}
+
 // Deliberately favours things that are cheap to start. For someone who stalls on
 // activation energy, the best next item is rarely the biggest one.
 export function focusScore(item, now = today()) {
-  return (
-    urgencyScore(daysUntil(item.dateObj, now)) +
+  // The lead deadline is the real moment this needs doing by, so urgency reads
+  // against it rather than against the later deadline of what it unlocks.
+  const left = daysUntil(effectiveDate(item, now), now);
+  const own = (
+    urgencyScore(left) +
     effortBand(item).bonus +
     stakesScore(item) +
     (itemState(item.id).startedAt ? 12 : 0)
   );
+  const p = projected(item, now);
+  return Math.max(own, p ? p.score : 0);
 }
 
 export function liveItems(items, now = today()) {
@@ -165,32 +221,12 @@ export function focusReason(item, all, now = today()) {
  * was opened and read without beginning. Reported as an observation with a
  * count, never as a verdict, because noticing is the useful part.
  */
+/**
+ * Avoidance moved to truth.js so it runs in tests without a browser. This
+ * wrapper keeps the call sites unchanged and feeds the live overlay.
+ */
 export function avoidance(item) {
-  const s = itemState(item.id);
-  if (s.startedAt || s.doneAt) return null;
-
-  const focusDays = (s.focusDays || []).length;
-  const snoozes = s.snoozes || 0;
-  const opens = (s.opens || []).length;
-  const openDays = new Set((s.opens || []).map((t) => new Date(t).toDateString())).size;
-
-  const passedOver = focusDays >= 3;
-  const setAsideOften = snoozes >= 2;
-  const readNotStarted = opens >= 3 && openDays >= 2;
-  if (!passedOver && !setAsideOften && !readNotStarted) return null;
-
-  // One sentence, strongest trace first. Piling all three on would read as a
-  // case being built against him.
-  let sentence;
-  if (passedOver) {
-    sentence = `This has been your start here item on ${focusDays} separate days and has not been started.`;
-  } else if (setAsideOften) {
-    sentence = `You have set this aside ${snoozes} times.`;
-  } else {
-    sentence = `You have opened this ${opens} times across ${openDays} days without starting it.`;
-  }
-
-  return { focusDays, snoozes, opens, openDays, sentence };
+  return baseAvoidance(item, snapshot());
 }
 
 export function avoidanceItems(items, now = today()) {

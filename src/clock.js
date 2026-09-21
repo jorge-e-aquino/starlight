@@ -32,11 +32,12 @@ function tick() {
   subscribers.forEach((fn) => fn({ now: new Date(current), rolledOver }));
 }
 
-setInterval(tick, 1000);
+const ticker = setInterval(tick, 1000);
+ticker.unref?.();
 
 // Coming back from a sleeping laptop can skip hours, so resync on wake rather
 // than waiting for the next tick to notice the date moved.
-document.addEventListener('visibilitychange', () => {
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
   if (!document.hidden) tick();
 });
 

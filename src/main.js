@@ -58,6 +58,7 @@ try {
   const map = loadMap();
 
   const ctx = {
+    map,
     lastVisit: previousVisit,
     get queueExpanded() { return ui.queueExpanded; },
     get pastExpanded() { return ui.pastExpanded; },

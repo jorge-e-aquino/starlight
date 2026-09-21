@@ -35,6 +35,20 @@ export const DEVICE_LOCAL = ['timer', 'sound'];
 
 const stamps = (obj) => (obj && obj._t) || {};
 
+function canonical(value) {
+  return JSON.stringify(value, (_, current) => current && typeof current === 'object' && !Array.isArray(current)
+    ? Object.keys(current).sort().reduce((result, key) => { result[key] = current[key]; return result; }, {})
+    : current);
+}
+
+// A timestamp tie carries no ordering evidence. Use one stable total order on
+// both devices; an explicit clear wins a tie and missing legacy fields lose it.
+function tieKey(value) {
+  if (value === undefined) return '0';
+  if (value === null) return '2';
+  return `1${canonical(value)}`;
+}
+
 /**
  * One field of one record. `at` is the moment that side last claimed this field;
  * absent means the write predates stamping, which loses to any stamped write.
@@ -47,14 +61,15 @@ function pickField(field, a, aAt, b, bAt) {
     // Later entries are the ones worth keeping when the union overflows, so walk
     // from the end and take the last `cap`.
     for (const v of [...toArray(a), ...toArray(b)].sort(compareLogEntries)) {
-      const key = typeof v === 'object' ? JSON.stringify(v) : v;
+      const key = canonical(v);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(v);
     }
     return out.slice(-cap);
   }
-  return (bAt || 0) > (aAt || 0) ? b : a;
+  if ((aAt || 0) !== (bAt || 0)) return (bAt || 0) > (aAt || 0) ? b : a;
+  return tieKey(b) > tieKey(a) ? b : a;
 }
 
 function toArray(v) {
@@ -66,12 +81,13 @@ function toArray(v) {
 // ("2026-9-7" vs "2026-10-7"), so compare them by the date they denote.
 function compareLogEntries(a, b) {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
-  return dayKeyValue(a) - dayKeyValue(b);
+  return dayKeyValue(a) - dayKeyValue(b) || (tieKey(a) > tieKey(b) ? 1 : tieKey(a) < tieKey(b) ? -1 : 0);
 }
 
 function dayKeyValue(key) {
   const [y, m, d] = String(key).split('-').map(Number);
-  return Number.isFinite(y) ? new Date(y, m, d).getTime() : 0;
+  const time = Number.isFinite(y) ? new Date(y, m, d).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
 }
 
 /** One record (an item, or one day's shape), merged field by field. */
@@ -111,8 +127,7 @@ function mergeCollection(a = {}, b = {}) {
  */
 export function mergeState(local = {}, remote = {}) {
   const merged = {
-    ...local,
-    ...remote,
+    ...mergeRecord(local, remote),
     items: mergeCollection(local.items, remote.items),
     days: mergeCollection(local.days, remote.days),
     lastVisit: Math.max(local.lastVisit || 0, remote.lastVisit || 0) || null

@@ -1,4 +1,4 @@
-import { formatDate } from './data.js';
+import { formatDate, parseDate } from './data.js';
 import { today } from './clock.js';
 import {
   effortBand,
@@ -6,9 +6,18 @@ import {
   daysUntil,
   avoidance,
   completionVerb,
-  phase
+  phase,
+  gatedBy
 } from './signals.js';
 import { dueTimeFor, hasDueTime, schemaTime, pomodorosFor } from './schedule.js';
+import {
+  dateBadge,
+  dateText,
+  resolutionLabel,
+  buildDateTrustForm,
+  buildResolutionForm,
+  buildExternalBlockForm
+} from './truth-ui.js';
 import * as store from './state.js';
 
 const TYPE_LABEL = {
@@ -112,6 +121,7 @@ export function createDetailPanel(ctx) {
     courseLine.append(swatch, el('span', null, `${course.code} · ${course.name}`));
 
     body.append(courseLine, el('h2', null, item.title));
+    body.append(dateBadge(item));
     if (!item.dateObj) body.append(el('div', 'd-date', 'No date on the schedule yet'));
 
     const tags = el('div', 'd-tags');
@@ -128,7 +138,17 @@ export function createDetailPanel(ctx) {
     // the thing, not to describe it.
     body.append(buildActions(item));
 
-    if (item.type !== 'standing') body.append(buildStepBox(item));
+    if (item.type !== 'standing' && !['absorbed', 'cant-submit'].includes(state.resolution?.state)) {
+      body.append(buildStepBox(item));
+    }
+
+    if (item.type !== 'standing') {
+      body.append(collapsible('Date and sources', buildDateTrustForm(item, ctx)));
+      body.append(collapsible('Outcome', buildResolutionForm(item, course, ctx)));
+      body.append(collapsible('External block', buildExternalBlockForm(item, ctx)));
+      const links = buildLinks(item, course);
+      if (links) body.append(links);
+    }
 
     const ring = avoidance(item);
     if (ring) {
@@ -205,6 +225,30 @@ export function createDetailPanel(ctx) {
       return wrap;
     }
 
+    // The verb set has to tell the truth. For work stopped by something broken,
+    // and for work with a recorded outcome, Start and Submitted are both false,
+    // so the panel states the situation and links to the forms instead.
+    if (state.externalBlock) {
+      const on = formatDate(parseDate(state.externalBlock.followUp), { month: 'short', day: 'numeric' });
+      wrap.append(
+        el('p', 'd-state-line', `Blocked: waiting on ${state.externalBlock.waitingOn}. Follow up ${on}.`)
+      );
+      return wrap;
+    }
+
+    const resolved = state.resolution?.state;
+    if (resolved === 'cant-submit' || resolved === 'absorbed') {
+      wrap.append(el('p', 'd-state-line', resolutionLabel(resolved) + '.'));
+      return wrap;
+    }
+
+    const waiting = gatedBy(item);
+    if (waiting.length) {
+      const byId = new Map(ctx.map.allItems.map((it) => [it.id, it]));
+      const names = waiting.map((id) => `${byId.get(id)?.title || id} (${byId.get(id)?.courseCode || ''})`.replace(/ \(\)$/, '')).join(', ');
+      wrap.append(el('p', 'fine', `Needs first: ${names}. Completing that is what makes this one startable.`));
+    }
+
     if (!state.startedAt) {
       const start = el('button', 'act primary', 'Start');
       start.addEventListener('click', () => ctx.act(() => store.markStarted(item.id)));
@@ -258,9 +302,8 @@ export function createDetailPanel(ctx) {
   }
 
   /**
-   * The schema has dates but no times, so the day plan has to assume one. This
-   * is where the assumption gets corrected, and it is worded as a correction
-   * rather than as a required field, because most items genuinely are end of day.
+   * The schema sometimes carries no time. This is where the item's real moment
+   * gets set, and it is worded as a correction rather than as a required field.
    */
   function buildDueTime(item) {
     const wrap = el('div', 'block');
@@ -283,18 +326,18 @@ export function createDetailPanel(ctx) {
     const fromSchema = schemaTime(item);
 
     if (overridden) {
-      const clear = el('button', 'linky', fromSchema ? 'Back to the scheduled time' : 'Back to end of day');
+      const clear = el('button', 'linky', fromSchema ? 'Back to the scheduled time' : 'Back to no time set');
       clear.addEventListener('click', () => ctx.act(() => store.setDueTime(item.id, null)));
       wrap.append(clear);
     } else if (fromSchema && item.timeConfirmed === false) {
       wrap.append(
-        el('p', 'fine', 'Not confirmed. This is an end of day placeholder rather than a time from the syllabus. Setting the real one re-orders the plan.')
+        el('p', 'fine', 'Not confirmed. This time is a placeholder from the schedule. Setting the real one re-orders the plan.')
       );
     } else if (fromSchema) {
       wrap.append(el('p', 'fine', 'From the syllabus. Changing it here overrides that for the day plan.'));
     } else {
       wrap.append(
-        el('p', 'fine', 'No time on the schedule for this one, so the day plan treats it as end of day. Setting the real time re-orders the plan.')
+        el('p', 'fine', 'No time on the schedule for this one. It orders after timed work until you set the real time.')
       );
     }
     return wrap;
@@ -312,6 +355,22 @@ export function createDetailPanel(ctx) {
     });
     wrap.append(group);
     wrap.append(el('p', 'fine', 'Starlight guesses from type and weight. Correcting it changes how early this appears.'));
+    return wrap;
+  }
+
+  // What this item opens up, with the course named. A prerequisite is a
+  // connection, and reading it as one is the point of the edge existing.
+  function buildLinks(item) {
+    const byId = new Map(ctx.map.allItems.map((it) => [it.id, it]));
+    const unlocked = (item.blocks || []).map((edge) => byId.get(edge.itemId)).filter(Boolean);
+    if (!unlocked.length) return null;
+    const done = (it) => Boolean(store.itemState(it.id).doneAt || it.status === 'done');
+    const outstanding = unlocked.filter((it) => !done(it));
+    const wrap = el('div', 'block');
+    wrap.append(el('h3', null, 'What this unlocks'));
+    wrap.append(el('p', null, outstanding.length
+      ? outstanding.map((it) => `${it.title} (${it.courseCode})`).join(', ')
+      : 'Everything behind this one is already done.'));
     return wrap;
   }
 

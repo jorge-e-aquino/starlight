@@ -9,6 +9,10 @@
   --ink: #221c52;
   --ink-soft: #5d5890;
   --ink-faint: #655f8c;
+  --state-unchecked-ink: #655f8c;
+  --state-verified-ink: #2e6b4f;
+  --state-blocked-ink: #7a5a2a;
+  --state-conflict-ink: #8a4b37;
   --ink-inverse: #ffffff;
   --accent: #4f5bd5;
   --accent-ink: #4854c8;
@@ -1021,6 +1025,7 @@ button { font: inherit; color: inherit; }
 
 .legend .k.filled { background: var(--ink-faint); opacity: 0.34; }
 .legend .k.dashed { border-style: dashed; }
+.legend .k.conflict { border-color: var(--state-conflict-ink); box-shadow: 0 0 0 var(--space-2) var(--state-conflict-ink); }
 
 .legend .k.orb {
   border: none;
@@ -1430,6 +1435,24 @@ button { font: inherit; color: inherit; }
 .node[data-phase="overdue"] .dot {
   border-style: solid;
   background: var(--gradient-node-dot);
+}
+
+.node[data-trust="unverified"] .dot { border-style: dashed; }
+.node[data-trust="contradicted"] .dot {
+  border-color: var(--state-conflict-ink);
+  box-shadow: 0 0 0 var(--space-2) var(--state-conflict-ink);
+}
+.node[data-blocked="true"] .dot { background: var(--accent-soft); }
+.node[data-resolution="absorbed"] .dot,
+.node[data-resolution="cant-submit"] .dot { opacity: 0.36; }
+.node[data-prerequisite="true"]::after {
+  content: '↗';
+  position: absolute;
+  left: calc(50% + var(--space-10));
+  top: calc(50% - var(--space-15));
+  color: var(--ink);
+  font-size: var(--text-micro-plus);
+  font-weight: var(--weight-700);
 }
 
 .legend .k.out { opacity: 0.62; }
@@ -2428,4 +2451,70 @@ button { font: inherit; color: inherit; }
     --motion-stagger-start: var(--motion-none);
   }
   *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; }
+}
+
+/* --- Date trust, outcomes, and external blocks (Phase 1) --- */
+
+/* The three date states never look alike. Unchecked is quiet ink, verified is
+   calm green, contradicted is the warm warning and carries weight. */
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--space-4);
+  font-size: var(--text-caption-small);
+  line-height: var(--leading-1-45);
+  color: var(--state-unchecked-ink);
+  background: var(--white-58);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-8);
+}
+.date-badge[data-trust="verified"] { color: var(--state-verified-ink); }
+.date-badge[data-trust="contradicted"] {
+  color: var(--state-conflict-ink);
+  font-weight: var(--weight-650);
+  border: var(--space-1) solid var(--state-conflict-ink);
+}
+.detail .date-badge { margin: var(--space-6) 0 var(--space-2); }
+.focus-body .date-badge { margin-top: var(--space-2); }
+/* In list rows the unchecked default stays quiet; a checked or contradicted
+   date speaks. The detail panel and the plan chips always show all three. */
+.row-main .date-badge[data-trust="unverified"] { display: none; }
+.block-due .date-badge { white-space: nowrap; }
+
+/* Node trust at pull-back distance. */
+.node[data-trust="contradicted"] .dot { box-shadow: 0 0 0 var(--space-2) var(--state-conflict-ink); }
+.node[data-trust="verified"] .dot { box-shadow: 0 0 0 var(--space-2) var(--state-verified-ink); }
+.node[data-blocked="true"] .dot { border: var(--space-2) dashed var(--state-blocked-ink); }
+
+/* Truth forms in the detail panel. */
+.truth-content { display: flex; flex-direction: column; gap: var(--space-8); }
+.truth-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8); }
+.truth-fields { display: grid; gap: var(--space-8); }
+.truth-field { display: grid; gap: var(--space-1); }
+.truth-label { font-size: var(--text-caption-small); color: var(--ink-faint); }
+.truth-input {
+  font: inherit;
+  font-size: var(--text-control);
+  color: var(--ink);
+  background: var(--white-84);
+  border: var(--space-1) solid var(--rule);
+  border-radius: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  min-height: 0;
+  width: 100%;
+}
+.truth-input:focus { outline: var(--space-2) solid var(--focus-ring); outline-offset: var(--space-1); }
+.truth-form .act { grid-column: 1 / -1; justify-self: start; }
+.truth-error { margin: 0; font-size: var(--text-control); color: var(--state-conflict-ink); }
+.source-evidence { margin: 0; padding-left: var(--space-16); font-size: var(--text-control); color: var(--ink-soft); display: grid; gap: var(--space-2); }
+.truth-content .linky { align-self: flex-start; }
+
+/* Situation lines where Start and Submitted would lie. */
+.d-state-line { margin: 0; font-size: var(--text-body-small); color: var(--state-blocked-ink); }
+.actions .act-done { color: var(--ink-soft); font-size: var(--text-control); align-self: center; }
+.actions .linky { font-size: var(--text-control); }
+
+@media (max-width: 560px) {
+  .truth-form { grid-template-columns: 1fr; }
 }

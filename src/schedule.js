@@ -3,15 +3,11 @@ import { itemState, isSnoozed, dayShape, pomodorosDone } from './state.js';
 import { effortBand, phase, isDone, liveItems, daysUntil } from './signals.js';
 
 /**
- * The schema records dates, never times. A day plan needs moments, not days, so
- * an item with no time set is assumed due at the end of its day. That assumption
- * is stated everywhere it is used and is correctable per item.
+ * The schema records dates, and only some items carry a time. A day plan needs
+ * moments, so a known time is used as given, and an unknown time stays unknown:
+ * those items order after timed work instead of borrowing a deadline the
+ * schedule never had.
  */
-export const DEFAULT_DUE_TIME = '23:59';
-
-// Effort bands say "about 1 to 2 hours". Scheduling needs one number, so these
-// budget the top of each band: a plan that runs short is a good surprise, a plan
-// that runs long is the failure this feature exists to prevent.
 export const EFFORT_MINUTES = { quick: 30, medium: 90, deep: 180 };
 
 /**
@@ -54,22 +50,21 @@ const HHMM = /^\d{1,2}:\d{2}$/;
 
 /**
  * Three sources, in order of authority: a time you set on the item, the time the
- * schema carries, and only then the end of day fallback. The schema used to have
- * no times at all, which is why the fallback existed; it is now the last resort
- * rather than the usual case.
+ * schema carries, and then nothing. The old end of day fallback invented a
+ * deadline the schedule never had, and a plan that measures against an invented
+ * deadline reports lateness that did not happen. Unknown means unknown.
  */
 export function dueTimeFor(item) {
   const set = itemState(item.id).dueTime;
   if (HHMM.test(set || '')) return set;
   if (HHMM.test(item.time || '')) return item.time;
-  return DEFAULT_DUE_TIME;
+  return null;
 }
 
-// Whether the time is actually known, as opposed to filled in. A schema time
-// carrying timeConfirmed: false is a placeholder and still reads as assumed.
+// Whether the time is actually known. A schema time carrying timeConfirmed:
+// false is a placeholder and still reads as unknown.
 export function hasDueTime(item) {
-  if (HHMM.test(itemState(item.id).dueTime || '')) return true;
-  return HHMM.test(item.time || '') && item.timeConfirmed !== false;
+  return Boolean(dueTimeFor(item));
 }
 
 // True when the item's own time is set, rather than inherited from a correction.
@@ -78,9 +73,11 @@ export function schemaTime(item) {
 }
 
 // The moment an item is actually due, as opposed to the day it lands on.
+// Unknown when the time is unknown; callers treat that as "no verdict".
 export function dueAt(item) {
-  if (!item.dateObj) return null;
-  const [h, m] = dueTimeFor(item).split(':').map(Number);
+  const time = dueTimeFor(item);
+  if (!item.dateObj || !time) return null;
+  const [h, m] = time.split(':').map(Number);
   const at = new Date(item.dateObj);
   at.setHours(h, m, 0, 0);
   return at;
@@ -168,9 +165,16 @@ export function resolveDayShape(at = rightNow()) {
 // thing. A chosen item overrides all of it and everything else keeps its order
 // behind it, which is what makes the result still make sense from there.
 function orderQueue(items, firstId) {
-  const byDeadline = [...items].sort(
-    (a, b) => dueAt(a) - dueAt(b) || budgetFor(a) - budgetFor(b) || a.schemaIndex - b.schemaIndex
-  );
+  // Known times order by their moment. Unknown times carry no deadline to
+  // measure, so they follow the timed work rather than pretending to be 23:59.
+  const byDeadline = [...items].sort((a, b) => {
+    const ta = dueAt(a);
+    const tb = dueAt(b);
+    if (ta === null && tb === null) return budgetFor(a) - budgetFor(b) || a.schemaIndex - b.schemaIndex;
+    if (ta === null) return 1;
+    if (tb === null) return -1;
+    return ta - tb || budgetFor(a) - budgetFor(b) || a.schemaIndex - b.schemaIndex;
+  });
   if (!firstId) return byDeadline;
   const chosen = byDeadline.filter((it) => it.id === firstId);
   return chosen.length ? [...chosen, ...byDeadline.filter((it) => it.id !== firstId)] : byDeadline;
@@ -391,9 +395,12 @@ export function formatTime(date) {
   return formatClock(date);
 }
 
-// "11:59 PM" from the stored "23:59", for anywhere the assumption is stated.
+// The known due moment, or an empty string when the time is unknown. Callers
+// render "time unknown" rather than a filled-in placeholder.
 export function formatDueTime(item) {
-  const [h, m] = dueTimeFor(item).split(':').map(Number);
+  const time = dueTimeFor(item);
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
   const d = new Date();
   d.setHours(h, m, 0, 0);
   return formatClock(d);
