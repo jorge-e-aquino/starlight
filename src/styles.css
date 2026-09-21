@@ -2603,3 +2603,91 @@ button { font: inherit; color: inherit; }
 /* The map at pull-back: heavy captions lead, trust and blockage stay marked. */
 .node[data-tier="heavy"] .node-caption { font-weight: var(--weight-650); }
 .node[data-blocked="true"] { opacity: 0.95; }
+
+/* A short daily check-in stays separate from the working list. */
+.checkin-link {
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: var(--text-control);
+  font-weight: var(--weight-600);
+  cursor: pointer;
+  padding: var(--space-8);
+}
+.checkin-link:hover { text-decoration: underline; }
+.checkin {
+  width: min(calc(100% - var(--space-32)), var(--size-message));
+  margin: var(--space-60) auto var(--space-72);
+}
+.checkin-card {
+  padding: var(--space-28);
+  border: var(--space-1) solid var(--glass-edge);
+  border-radius: var(--space-16);
+  background: var(--glass-strong);
+  box-shadow: var(--glass-shadow);
+  animation: fade var(--motion-appear-duration) var(--motion-appear-ease);
+}
+.checkin-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-12); }
+.checkin-kicker {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--text-label);
+  font-weight: var(--weight-650);
+  letter-spacing: var(--tracking-0-1);
+  text-transform: uppercase;
+}
+.checkin-title { margin: var(--space-20) 0 var(--space-12); font-size: var(--text-title); line-height: var(--leading-1-28); }
+.checkin-body { display: grid; gap: var(--space-12); margin-bottom: var(--space-24); }
+.checkin-copy { margin: 0; color: var(--ink-soft); font-size: var(--text-body); line-height: var(--leading-1-5); }
+.checkin-evening-next { margin: var(--space-20) 0; color: var(--ink-soft); font-size: var(--text-body); line-height: var(--leading-1-5); }
+.checkin-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  flex-wrap: wrap;
+  padding: var(--space-12) var(--space-14);
+  border: var(--space-1) solid var(--rule);
+  border-radius: var(--space-12);
+  background: var(--surface-panel);
+}
+.checkin-item-name {
+  border: 0;
+  padding: 0;
+  background: none;
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--weight-650);
+  cursor: pointer;
+}
+.checkin-item-name:hover { text-decoration: underline; }
+.checkin-course { color: var(--ink-soft); font-size: var(--text-control); white-space: nowrap; }
+.checkin-status { color: var(--state-blocked-ink); font-size: var(--text-control); font-weight: var(--weight-600); }
+.checkin-shape { display: flex; align-items: end; gap: var(--space-10); flex-wrap: wrap; }
+.checkin-shape label { display: grid; gap: var(--space-6); color: var(--ink-soft); font-size: var(--text-control); }
+.checkin-shape input {
+  padding: var(--space-8) var(--space-12);
+  border: var(--space-1) solid var(--rule);
+  border-radius: var(--space-10);
+  background: var(--surface-input);
+  color: var(--ink);
+  font: inherit;
+}
+.checkin-card > .act.primary { margin-top: var(--space-16); }
+.reminder-panel {
+  margin-top: var(--space-24);
+  padding-top: var(--space-20);
+  border-top: var(--space-1) solid var(--rule);
+  display: grid;
+  gap: var(--space-12);
+}
+.reminder-title { margin: 0; font-size: var(--text-heading); color: var(--ink); }
+.reminder-form { display: grid; gap: var(--space-12); }
+.reminder-form label { display: grid; gap: var(--space-6); font-size: var(--text-control); color: var(--ink-soft); }
+.reminder-form .act { justify-self: start; }
+@media (max-width: 760px) {
+  .checkin { width: auto; margin: var(--space-24) var(--space-18) var(--space-54); }
+  .checkin-card { padding: var(--space-20); }
+  .checkin-link { order: 3; }
+}

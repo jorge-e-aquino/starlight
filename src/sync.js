@@ -1,19 +1,6 @@
-/**
- * Sync over a secret GitHub gist.
- *
- * There is no Starlight server and this is deliberate: the thing being synced is
- * a record of what one person has and has not gotten around to, including how
- * many times they opened an assignment without starting it. That is not data to
- * put on someone else's box for the sake of a feature. A secret gist is storage
- * the user already owns, already trusts, and can read or delete without asking
- * anyone.
- *
- * The token is entered per device and kept in localStorage, deliberately apart
- * from the synced overlay so it is never pushed, never exported, and never
- * present in the deployed bundle. A gist-scoped token is the whole blast radius
- * if a device is lost, and it is revocable from GitHub settings.
- */
+/** Progress sync over a secret GitHub gist. Sensitive observations stay local. */
 import { snapshot, applyRemote, onWrite } from './state.js';
+import { DEVICE_LOCAL } from './merge.js';
 
 const CREDS_KEY = 'starlight.sync.v1'; // { token, gistId } — never synced
 const FILENAME = 'starlight-progress.json';
@@ -43,6 +30,25 @@ function canonical(value) {
       ? Object.keys(v).sort().reduce((o, k) => ((o[k] = v[k]), o), {})
       : v
   );
+}
+
+/** Keep a full local backup, but send only decisions needed on another device. */
+export function sanitizeForSync(overlay) {
+  const localOnly = new Set([...DEVICE_LOCAL, 'lastVisit', 'opens', 'focusDays']);
+  const strip = (record) => {
+    const clean = {};
+    for (const [field, value] of Object.entries(record || {})) {
+      if (localOnly.has(field)) continue;
+      if (field === '_t') {
+        const stamps = Object.fromEntries(Object.entries(value || {}).filter(([key]) => !localOnly.has(key)));
+        if (Object.keys(stamps).length) clean._t = stamps;
+      } else clean[field] = value;
+    }
+    return clean;
+  };
+  return { ...strip(overlay), items: Object.fromEntries(
+    Object.entries(overlay?.items || {}).map(([id, item]) => [id, strip(item)])
+  ) };
 }
 
 function readCreds() {
@@ -111,7 +117,7 @@ export async function createGist(token) {
     body: JSON.stringify({
       description: 'Starlight progress. Private to you; safe to delete to reset sync.',
       public: false,
-      files: { [FILENAME]: { content: canonical(snapshot()) } }
+      files: { [FILENAME]: { content: canonical(sanitizeForSync(snapshot())) } }
     })
   });
   return gist.id;
@@ -164,8 +170,8 @@ export async function syncNow({ quiet = false } = {}) {
   inFlight = true;
   if (!quiet) setStatus('syncing');
   try {
-    const changedLocally = applyRemote(await readRemote());
-    const outgoing = canonical(snapshot());
+    const changedLocally = applyRemote(sanitizeForSync(await readRemote()));
+    const outgoing = canonical(sanitizeForSync(snapshot()));
     if (outgoing !== lastPushed) {
       await api(`/${creds.gistId}`, {
         method: 'PATCH',
@@ -231,7 +237,7 @@ function notify(changed) {
 function flush() {
   if (!isConfigured() || !pushTimer) return;
   clearTimeout(pushTimer);
-  const outgoing = canonical(snapshot());
+  const outgoing = canonical(sanitizeForSync(snapshot()));
   if (outgoing === lastPushed) return;
   try {
     fetch(`${API}/${creds.gistId}`, {

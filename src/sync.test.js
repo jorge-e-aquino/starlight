@@ -1,7 +1,9 @@
 // Run: node src/sync.test.js
 // merge.test.js checks the merge in the abstract. This checks the thing that
 // actually has to hold: two real state.js instances, each with its own storage,
-// exchanging copies the way sync.js does, ending up agreeing.
+// exchanging sanitized copies the way sync.js does, ending up agreeing on
+// progress decisions while keeping avoidance observations on each device.
+import { sanitizeForSync } from './sync.js';
 const STATE = new URL('./state.js', import.meta.url).href;
 
 function freshStorage() {
@@ -32,7 +34,7 @@ function at(device, fn) {
 }
 
 // What crosses the wire is text, so the test sends text too.
-const wire = (device) => JSON.parse(at(device, (s) => JSON.stringify(s.snapshot())));
+const wire = (device) => JSON.parse(at(device, (s) => JSON.stringify(sanitizeForSync(s.snapshot()))));
 
 let failures = 0;
 function check(name, pass, got) {
@@ -68,12 +70,13 @@ const P = () => at(phone, (s) => s.snapshot());
 
 check('a submission made on the laptop reaches the phone', P().items['econ-cw6'].doneAt != null);
 check('a start made on the phone reaches the laptop', L().items['mgt2250-hw2'].startedAt != null);
-check('both devices\' halves of the open log survive',
-  sameContent(L().items['ob-journal4'].opens, [1000, 2000, 3000]), L().items['ob-journal4'].opens);
+check('each device keeps its own open log',
+  sameContent(L().items['ob-journal4'].opens, [1000]) && sameContent(P().items['ob-journal4'].opens, [2000, 3000]));
 // Key order differs because each device created items in its own order. That is
 // an artifact of insertion, not a disagreement, and sync.js serializes with
 // sorted keys so it never reaches the gist.
-check('the two devices hold the same state', sameContent(L().items, P().items));
+check('the two devices agree on synced decisions',
+  sameContent(sanitizeForSync(L()).items, sanitizeForSync(P()).items));
 
 // --- undoing on one device must beat the other's stale claim ---
 await new Promise((r) => setTimeout(r, 5)); // ensure a later timestamp
@@ -93,8 +96,9 @@ check('...in both directions', at(phone, (s) => s.applyRemote(wire(laptop))) ===
 // --- a device that was never synced must not wipe the one that was ---
 const newPhone = await bootDevice('new');
 at(newPhone, (s) => s.applyRemote(wire(laptop)));
-check('a fresh device adopts the existing history',
+check('a fresh device adopts the existing decisions',
   newPhone && P().items['mgt2250-hw2'].startedAt != null);
+check('a fresh device does not import avoidance logs', !newPhone.api.snapshot().items['ob-journal4']?.opens);
 at(laptop, (s) => s.applyRemote(wire(newPhone)));
 check('and adds nothing back', L().items['econ-cw6'].doneAt === null);
 

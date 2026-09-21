@@ -10,12 +10,9 @@
  *
  * Two kinds of field, because they fail differently:
  *
- * LOGS are things that happened. Two devices observing different halves of the
- * truth is normal, and losing either half loses a real observation, so they union.
- * These are the avoidance signals, and they are the reason the merge exists at
- * all: opening an item four times on your phone is exactly the kind of circling
- * the app is supposed to notice, and a merge that dropped it would blind the
- * feature on the device you actually carry.
+ * LOGS are things that happened. They union when a user imports a full local
+ * backup, so restoring a file cannot erase an observation. Current gist sync
+ * strips avoidance logs before transmission; each device keeps its own traces.
  *
  * DECISIONS are claims about the current state. Two devices disagreeing means one
  * of them is stale, so the most recent claim wins outright. Last-write-wins is

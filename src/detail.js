@@ -87,7 +87,7 @@ export function createDetailPanel(ctx) {
     openItem = null;
     document.querySelectorAll('.node.is-selected').forEach((n) => n.classList.remove('is-selected'));
     if (location.hash.startsWith('#item=')) {
-      history.replaceState(null, '', location.pathname + location.search);
+      try { history.replaceState(null, '', location.pathname + location.search); } catch { /* isolated preview */ }
     }
     if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
   }
@@ -105,7 +105,7 @@ export function createDetailPanel(ctx) {
     paint(item, course, isFocus);
     lastOpenAt = Date.now();
     panel.classList.add('open');
-    history.replaceState(null, '', `#item=${item.id}`);
+    try { history.replaceState(null, '', `#item=${item.id}`); } catch { /* isolated preview */ }
     close.focus();
   }
 

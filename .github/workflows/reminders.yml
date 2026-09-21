@@ -1,0 +1,22 @@
+name: Starlight morning reminders
+
+on:
+  schedule:
+    # UTC windows cover 7 to 9 in New York across daylight saving changes.
+    - cron: '17 11-15 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send due reminders
+        env:
+          URL: ${{ secrets.STARLIGHT_SEND_URL }}
+          KEY: ${{ secrets.STARLIGHT_SEND_SECRET }}
+        run: |
+          test -n "$URL" && test -n "$KEY"
+          curl --fail-with-body --silent --show-error --retry 2 --retry-delay 20 \
+            --request POST --header "Authorization: Bearer $KEY" "$URL"

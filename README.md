@@ -208,10 +208,11 @@ that is still due or marks work done that is not.
 
 ## Sync
 
-Progress syncs between devices through a **secret GitHub gist**. There is no Starlight
-server, deliberately: the thing being synced records what one person has and has not
-gotten around to, including how many times they opened an assignment without starting
-it, and that is not data to put on someone else's machine for the sake of a feature.
+Progress decisions sync between devices through a **secret GitHub gist**. The
+outgoing copy strips avoidance opens, focus days, the last visit, the running
+timer and sound preference. A full local backup retains those fields. The
+Vercel Functions added for reminders receive only a separate, smaller
+scheduling projection; they do not store the progress overlay.
 
 A gist-scoped GitHub token is entered once per device and kept in local storage under
 a separate key from the overlay, so it is never synced, never exported, and never
@@ -229,10 +230,9 @@ so the merge (`src/merge.js`) has to be decidable from the two copies alone and 
 the same answer whichever side runs it. Two kinds of field, because they fail
 differently:
 
-**Logs** are things that happened, so they union. These are the avoidance signals, and
-they are why the merge exists at all: opening an item four times on your phone is
-exactly the circling the app is meant to notice, and dropping it would blind the
-feature on the device you actually carry.
+**Logs** are things that happened, so they union when a full local backup is
+restored. Gist sync strips avoidance logs before transmission, leaving each
+device with its own observations.
 
 **Decisions** are claims about the current state, so the most recent stamped write
 wins. Last-write-wins is right here specifically because it respects undo: marking
@@ -242,8 +242,7 @@ un-marked.
 
 Every field write carries a timestamp for this. Nothing local reads them.
 
-The running timer and the sound setting never sync. A pomodoro belongs to the device
-you are sitting at.
+The running timer and sound setting also stay on the device you are using.
 
 The merge is commutative, idempotent and associative, which is what lets devices sync
 in any order and still land in the same place. `node src/merge.test.js` checks those

@@ -11,7 +11,7 @@
  * Hand written rather than generated because the whole policy is two rules, and
  * a build-time precache manifest would be more machinery than that is worth.
  */
-const VERSION = 'starlight-v1';
+const VERSION = 'starlight-v2';
 
 // Scope is the directory this file was served from, which is what makes the
 // same worker correct at a domain root and under a project path.
@@ -69,4 +69,27 @@ self.addEventListener('fetch', (event) => {
         })
     )
   );
+});
+
+self.addEventListener('push', (event) => {
+  let message = {};
+  try { message = event.data?.json() || {}; } catch { /* invalid payload */ }
+  if (!message.title || !message.body) return;
+  event.waitUntil(self.registration.showNotification(message.title, {
+    body: message.body,
+    tag: message.tag || 'starlight-reminder',
+    icon: `${ROOT}icon-192.png`,
+    data: { url: message.url || ROOT }
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || ROOT, self.location.origin);
+  if (target.origin !== self.location.origin) return;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
+    const existing = clients.find((client) => new URL(client.url).origin === target.origin);
+    if (existing) { await existing.navigate(target.href); return existing.focus(); }
+    return self.clients.openWindow(target.href);
+  }));
 });

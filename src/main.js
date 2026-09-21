@@ -4,6 +4,7 @@ import { createDetailPanel } from './detail.js';
 import { renderMap, starSvg } from './render.js';
 import { renderNow } from './now.js';
 import { renderPlan } from './plan.js';
+import { renderCheckin, renderEvening } from './ritual.js';
 import { buildDayPlan } from './schedule.js';
 import * as clock from './clock.js';
 import * as store from './state.js';
@@ -11,6 +12,7 @@ import { pickFocus, liveItems, avoidanceItems } from './signals.js';
 import { toast } from './toast.js';
 import { initTooltips } from './tooltip.js';
 import * as sync from './sync.js';
+import { recordUsefulMoment, startReminderSync } from './push-client.js';
 
 const app = document.querySelector('#app');
 
@@ -29,12 +31,13 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 const previousVisit = store.lastVisit();
 const firstRun = !previousVisit && Object.keys(store.snapshot().items).length === 0;
 store.recordVisit();
+startReminderSync();
 
 const anim = { mount: true, focusChanged: false };
 
 // The chosen view is part of the URL, so a particular way of looking at the
 // semester can be bookmarked or reopened.
-const VIEWS = ['now', 'plan', 'map'];
+const VIEWS = ['now', 'plan', 'map', 'checkin', 'evening'];
 const requestedView = new URLSearchParams(location.search).get('view');
 const startView = VIEWS.includes(requestedView) ? requestedView : 'now';
 
@@ -43,6 +46,7 @@ const ui = {
   queueExpanded: false,
   pastExpanded: false,
   finishedExpanded: false,
+  checkinStep: 0,
   awayDismissed: false,
   firstRunDismissed: false
 };
@@ -65,6 +69,8 @@ try {
     get finishedExpanded() { return ui.finishedExpanded; },
     toggleFinished: () => { ui.finishedExpanded = !ui.finishedExpanded; paint(); },
     get awayDismissed() { return ui.awayDismissed; },
+    get checkinStep() { return ui.checkinStep; },
+    get firstRun() { return firstRun; },
     get focusItem() { return pickFocus(map.allItems); },
     get mountAnim() { return anim.mount; },
     get focusChanged() { return anim.focusChanged; },
@@ -72,6 +78,10 @@ try {
     togglePast: () => { ui.pastExpanded = !ui.pastExpanded; paint(); },
     dismissAway: () => { ui.awayDismissed = true; paint(); },
     openPlan: () => setView('plan'),
+    openCheckin: () => { ui.checkinStep = 0; setView('checkin'); },
+    openEvening: () => setView('evening'),
+    closeCheckin: () => setView('now'),
+    advanceCheckin: () => { ui.checkinStep = Math.min(4, ui.checkinStep + 1); if (ui.checkinStep === 4) recordUsefulMoment(); paint(); },
     repaint: () => paint(),
     // Every mutation goes through here so one repaint keeps the whole app,
     // including the open detail panel, consistent with the new state.
@@ -85,10 +95,10 @@ try {
         });
       }
     },
-    openDetail: (item, trigger) => {
+    openDetail: (item, trigger, options) => {
       const course = map.courseById.get(item.courseId);
       const focus = pickFocus(map.allItems);
-      detail.show(item, course, Boolean(focus && focus.id === item.id), trigger);
+      detail.show(item, course, Boolean(focus && focus.id === item.id), trigger, options);
       paint({ keepDetail: true });
     }
   };
@@ -103,9 +113,9 @@ try {
 
   function paint() {
     const focus = pickFocus(map.allItems);
-    // Being offered and passed over is itself the signal, so it is recorded
-    // here rather than waiting for a click that may never come.
-    if (focus) store.recordFocusDay(focus.id);
+    // Only Now actually offers this item as the thing to start. Visiting Plan,
+    // Map, or the check-in must not manufacture an avoidance observation.
+    if (focus && ui.view === 'now') store.recordFocusDay(focus.id);
     anim.mount = ui.view !== lastView;
     anim.focusChanged = (focus ? focus.id : null) !== lastFocusId;
     lastView = ui.view;
@@ -113,7 +123,7 @@ try {
     shell.replaceChildren(
       buildMasthead(map, focus),
       ...buildAppStates(),
-      ...(ui.view === 'map' ? [] : buildEdgeTargets(ui.view)),
+      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' ? [] : buildEdgeTargets(ui.view)),
       surfaceFor(ui.view)
     );
     if (detail.openItem) {
@@ -160,6 +170,8 @@ try {
   function surfaceFor(view) {
     if (view === 'plan') return renderPlan(map, ctx);
     if (view === 'map') return renderMap(map, ctx);
+    if (view === 'checkin') return renderCheckin(map, ctx);
+    if (view === 'evening') return renderEvening(map, ctx);
     return renderNow(map, ctx);
   }
 
@@ -170,7 +182,12 @@ try {
     const url = new URL(location.href);
     if (id === 'now') url.searchParams.delete('view');
     else url.searchParams.set('view', id);
-    history.replaceState(null, '', url);
+    try {
+      history.replaceState(null, '', url);
+    } catch {
+      // An isolated srcdoc preview cannot rewrite its URL. Its in-memory view
+      // still changes, so the state fixture can exercise controls safely.
+    }
     paint();
   }
 
@@ -223,7 +240,12 @@ try {
       toggle.append(b);
     });
 
-    right.append(status, toggle);
+    const checkin = document.createElement('button');
+    checkin.className = 'checkin-link';
+    checkin.textContent = 'Check in';
+    checkin.addEventListener('click', () => { ui.checkinStep = 0; setView('checkin'); });
+
+    right.append(status, checkin, toggle);
     head.append(left, right);
     return head;
   }

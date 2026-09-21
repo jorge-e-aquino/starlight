@@ -4,3 +4,12 @@ dist
 
 # Local safety copies of the schema. Git is the history once this is a repo.
 course_map_schema_v2.backup-*.json
+
+.env
+.env.local
+.env.*.local
+.vercel
+.env*
+
+.starlight-secrets.env
+.starlight-pairing-key
