@@ -319,6 +319,19 @@ function buildRow(item, map, ctx, now) {
   const row = el('div', 'row-item');
   row.style.setProperty('--course-color', course.color);
   if (effectiveStatus(item) === 'started') row.dataset.started = 'true';
+  // Stakes, as weight, and the real state, as data the stylesheet reads. A
+  // 100 point exam and a 2.5 point summary should never look alike, and a
+  // blocked row must not read as one merely not started.
+  row.dataset.stakes =
+    item.type === 'exam' || item.type === 'final' || (item.weightPercent ?? 0) >= 8
+      ? 'heavy'
+      : (item.points ?? 0) >= 6
+        ? 'mid'
+        : 'light';
+  const state = store.itemState(item.id);
+  row.dataset.blocked = String(Boolean(state.externalBlock));
+  const resolved = state.resolution?.state;
+  row.dataset.resolved = resolved === 'cant-submit' || resolved === 'absorbed' ? resolved : '';
 
   const dot = el('span', 'row-dot');
   const main = el('button', 'row-main');

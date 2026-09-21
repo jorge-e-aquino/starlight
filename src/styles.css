@@ -2538,3 +2538,68 @@ button { font: inherit; color: inherit; }
 .grade-conflict { margin: var(--space-11) 0 0; font-size: var(--text-control); color: var(--state-conflict-ink); line-height: var(--leading-1-45); }
 .plan-risk { margin: var(--space-6) 0 0; font-size: var(--text-body-compact); color: var(--ink-soft); }
 .plan-exposure { margin: var(--space-6) 0 0; font-size: var(--text-body-compact); color: var(--crunch-ink); }
+
+/* --- Phase 3: editorial pass --- */
+
+/* Course identity rides the left rail of every row. Blocked work breaks the
+   rail; resolved work mutes it. Same rail, different sentence. */
+.row-item {
+  border-left: var(--space-6) solid var(--course-color, transparent);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.row-item[data-blocked="true"] {
+  border-left-color: var(--state-blocked-ink);
+  border-left-style: dashed;
+}
+.row-item[data-resolved] { border-left-color: var(--ink-faint); opacity: 0.82; }
+
+/* Stakes as weight: an exam row leads, a 2.5 point summary stays quiet. */
+.row-item[data-stakes="heavy"] .row-title {
+  font-size: var(--text-body-compact);
+  font-weight: var(--weight-650);
+}
+.row-item[data-stakes="light"] .row-title {
+  font-weight: var(--weight-500);
+  color: var(--ink-soft);
+}
+
+/* Actions recede until they are wanted. The one primary act per surface keeps
+   its weight; everything else becomes quiet text with a hairline. */
+.act {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--rule);
+  box-shadow: none;
+}
+.act:hover {
+  background: var(--white-58);
+  color: var(--ink);
+}
+.act.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-action-end));
+  color: var(--ink-inverse);
+  border-color: transparent;
+  box-shadow: var(--shadow-act-primary);
+}
+
+/* Stronger headings: one clear step up for the thing being looked at. */
+.plan-title, .clear-title {
+  font-size: var(--text-heading-large);
+  font-weight: var(--weight-650);
+  letter-spacing: var(--tracking-minus-0-01);
+}
+.section-head { color: var(--ink-soft); }
+
+/* The focus card carries the biggest type in the app; it is the answer to the
+   only question Now asks. */
+.focus-title { letter-spacing: var(--tracking-minus-0-02); }
+
+/* Status text, where a color alone would not say enough. */
+.act-done { font-weight: var(--weight-600); }
+.row-item[data-resolved="cant-submit"] .act-done { color: var(--state-conflict-ink); }
+.row-item[data-resolved="absorbed"] .act-done { color: var(--ink-soft); }
+
+/* The map at pull-back: heavy captions lead, trust and blockage stay marked. */
+.node[data-tier="heavy"] .node-caption { font-weight: var(--weight-650); }
+.node[data-blocked="true"] { opacity: 0.95; }
