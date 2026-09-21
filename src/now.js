@@ -49,7 +49,6 @@ export function renderNow(map, ctx) {
   const now = today();
   const items = map.allItems;
   const root = el('div', 'now');
-  root.dataset.mode = ctx.attentionMode || 'full';
   if (ctx.mountAnim) root.classList.add('mounting');
 
   const away = awayReport(items, ctx.lastVisit, now);
@@ -62,11 +61,6 @@ export function renderNow(map, ctx) {
   const recovery = recoveryChoice(past.map((item) => ({ ...item, resolution: store.itemState(item.id).resolution })), ctx.lastVisit, now);
   if (recovery && !ctx.awayDismissed) {
     root.append(buildRecovery(recovery, map, ctx, now), buildBackup(ctx));
-    return root;
-  }
-
-  if (ctx.attentionMode === 'light') {
-    root.append(focus ? buildLightFocus(focus, map, ctx, now) : buildClear(items, map, ctx, now));
     return root;
   }
 
@@ -108,21 +102,6 @@ export function renderNow(map, ctx) {
 
   root.append(buildBackup(ctx));
   return root;
-}
-
-function buildLightFocus(item, map, ctx, now) {
-  const course = map.courseById.get(item.courseId);
-  const state = store.itemState(item.id);
-  const card = el('section', 'light-focus');
-  card.style.setProperty('--course-color', course.color);
-  card.append(el('p', 'focus-eyebrow', 'One thing for now'));
-  card.append(el('h2', 'light-title', item.title));
-  card.append(el('p', 'focus-meta', `${course.code} · ${dueLabel(item, now)}`));
-  card.append(dateBadge(item));
-  const action = el('button', 'act primary', state.externalBlock ? 'See what is blocking it' : state.startedAt ? 'Continue' : 'Open item');
-  action.addEventListener('click', () => ctx.openDetail(item));
-  card.append(action);
-  return card;
 }
 
 function buildRecovery(recovery, map, ctx, now) {
@@ -220,7 +199,7 @@ function buildFocus(item, items, map, ctx, now) {
   const step = state.firstStep;
   if (step) body.append(el('div', 'focus-step', `First step: ${step}`));
 
-  body.append(buildActions(item, ctx, { primary: true }));
+  body.append(buildActions(item, ctx));
 
   const ring = avoidance(item);
   if (ring) body.append(buildAvoidanceNote(item, ring, ctx));
@@ -392,9 +371,11 @@ function buildRow(item, map, ctx, now) {
     el('span', 'row-meta', `${course.code} · ${dueLabel(item, now)} · ${band.label.toLowerCase()}`)
   );
   main.append(dateBadge(item));
+  if (state.externalBlock) main.append(el('span', 'row-state', 'Blocked externally'));
+  else if (resolved === 'cant-submit' || resolved === 'absorbed') main.append(el('span', 'row-state', resolutionLabel(resolved)));
   main.addEventListener('click', () => ctx.openDetail(item));
 
-  row.append(dot, main, buildActions(item, ctx, { compact: true }));
+  row.append(dot, main);
   return row;
 }
 
@@ -419,9 +400,9 @@ function buildStillOpen(past, map, ctx, now) {
   return section;
 }
 
-function buildActions(item, ctx, { primary = false, compact = false } = {}) {
+function buildActions(item, ctx) {
   const state = store.itemState(item.id);
-  const wrap = el('div', compact ? 'actions compact' : 'actions');
+  const wrap = el('div', 'actions');
 
   if (state.doneAt) {
     const undo = el('button', 'act ghost', 'Undo');
@@ -433,7 +414,7 @@ function buildActions(item, ctx, { primary = false, compact = false } = {}) {
   // The verb set tells the truth on every surface. Stopped work and resolved
   // misses carry their situation instead of a Start and Submitted pair.
   if (state.externalBlock) {
-    const blocked = el('button', compact ? 'linky' : 'act ghost', 'Blocked externally');
+    const blocked = el('button', 'act ghost', 'Blocked externally');
     blocked.addEventListener('click', () => ctx.openDetail(item));
     wrap.append(blocked);
     return wrap;
@@ -446,12 +427,12 @@ function buildActions(item, ctx, { primary = false, compact = false } = {}) {
   }
 
   if (!state.startedAt) {
-    const start = el('button', primary ? 'act primary' : 'act', 'Start');
+    const start = el('button', 'act primary', 'Start');
     start.addEventListener('click', () => ctx.act(() => store.markStarted(item.id)));
     wrap.append(start);
   }
 
-  const finish = el('button', state.startedAt && primary ? 'act primary' : 'act', completionVerb(item));
+  const finish = el('button', state.startedAt ? 'act primary' : 'act', completionVerb(item));
   finish.addEventListener('click', () =>
     ctx.act(() => store.markDone(item.id), {
       message: `${item.title} · ${completionVerb(item).toLowerCase()}`,
@@ -459,17 +440,6 @@ function buildActions(item, ctx, { primary = false, compact = false } = {}) {
     })
   );
   wrap.append(finish);
-
-  if (!compact) {
-    const later = el('button', 'act ghost', 'Not today');
-    later.addEventListener('click', () =>
-      ctx.act(() => store.snoozeUntilTomorrow(item.id), {
-        message: `${item.title} · set aside until tomorrow`,
-        undo: () => store.unsnooze(item.id)
-      })
-    );
-    wrap.append(later);
-  }
 
   return wrap;
 }

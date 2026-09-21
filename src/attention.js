@@ -1,12 +1,10 @@
 // Device preferences never enter the progress overlay or its sync/export path.
 const KEY = 'starlight.attention.v1';
-export const MODES = ['light', 'full', 'deep'];
 export const GROUNDS = ['lavender', 'paper', 'slate'];
 export const SCHEMES = ['system', 'light', 'dark'];
 
 export function cleanPreferences(value = {}) {
   return {
-    mode: MODES.includes(value.mode) ? value.mode : 'full',
     ground: GROUNDS.includes(value.ground) ? value.ground : 'lavender',
     scheme: SCHEMES.includes(value.scheme) ? value.scheme : 'system'
   };

@@ -15,7 +15,7 @@ npm run dev
 
 `npm run build` produces a static bundle in `dist/`, `npm run preview` serves it.
 
-## The three surfaces
+## The five views
 
 **Now** shows one thing to start, a short list of what else is in range, and a quiet
 line about what is further out. Everything beyond its actionable window is not on
@@ -28,6 +28,14 @@ shows on a day that has things due on it.
 
 **Map** is the whole semester on a shared time axis, one region per course. Reach it
 from the toggle or from `?view=map`.
+
+**Interviews** guides MGT 4803 conversations: open the questions when an interview
+is happening, keep contacts below, and reveal findings and the weekly draft when
+working on those. **Materials** begins with one file drop; Canvas calendar and
+manual correction controls sit behind a disclosure. These names tell the user
+what the views do. The earlier Light/Full/Deep switch was removed in favor of
+revealing detail where it is needed: Now leads with one item, Plan carries the
+grade path, and Map holds the whole semester.
 
 Now and Plan both carry a pair of large targets on their margins, so wherever you
 are, the two surfaces either side are a click away in the empty space: from Now, the

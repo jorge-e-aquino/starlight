@@ -127,6 +127,48 @@ export function setFirstStep(id, text) {
   patch(id, { firstStep: text || null });
 }
 
+// Labels are a current editorial choice, not an event stream. A later edit or
+// removal must beat an older device's version during merge.
+export function setLabels(id, labels) {
+  if (!Array.isArray(labels)) throw new Error('Labels must be a list.');
+  const clean = [...new Set(labels.map((label) => String(label).trim().toLowerCase()).filter(Boolean))];
+  if (clean.length > 20 || clean.some((label) => label.length > 32)) throw new Error('Use up to 20 short labels.');
+  patch(id, { labels: clean });
+}
+
+// Confirmed source facts and topics are decisions. Each record is keyed
+// independently so confirming one policy cannot overwrite another device's
+// unrelated policy or topic.
+export function confirmCourseFact(id, fact) {
+  if (!id || !fact?.courseId || !['latePolicy', 'dropRule', 'deadlineTime'].includes(fact.kind) || !fact.source?.trim() || !fact.value) {
+    throw new Error('Choose a course, fact, and named source before confirming.');
+  }
+  patchFieldRecord('courseFacts', id, { courseId: fact.courseId, kind: fact.kind, groupId: fact.groupId || null, value: structuredClone(fact.value), source: fact.source.trim(), confirmedAt: Date.now() });
+}
+
+export function confirmTopic(id, topic) {
+  if (!id || !topic?.courseId || !topic.title?.trim() || !topic.source?.trim()) {
+    throw new Error('Name the topic, course, and source before adding it.');
+  }
+  patchFieldRecord('topics', id, { courseId: topic.courseId, title: topic.title.trim(), source: topic.source.trim(), page: topic.page ?? null, itemIds: topic.itemIds || [], examIds: topic.examIds || [], confirmedAt: Date.now(), deletedAt: null });
+}
+
+export function removeTopic(id) { patchFieldRecord('topics', id, { deletedAt: Date.now() }); }
+
+export function registerDocument(id, document) {
+  if (!id || !document?.courseId || !document.name?.trim() || !Number.isFinite(document.size) || document.size < 0 || !document.type) {
+    throw new Error('Choose a course and a readable document.');
+  }
+  patchFieldRecord('documents', id, {
+    courseId: document.courseId, name: document.name.trim(), type: document.type,
+    size: document.size, kind: document.kind || 'other', itemIds: document.itemIds || [],
+    remote: Boolean(document.remote), pathname: document.pathname || null,
+    addedAt: document.addedAt || Date.now(), deletedAt: null
+  });
+}
+
+export function removeDocument(id) { patchFieldRecord('documents', id, { deletedAt: Date.now() }); }
+
 export function setEffort(id, band) {
   patch(id, { effort: band || null });
 }

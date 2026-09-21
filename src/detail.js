@@ -20,6 +20,8 @@ import {
   buildExternalBlockForm
 } from './truth-ui.js';
 import * as store from './state.js';
+import { documentRows } from './document-ui.js';
+import { effectiveCourse } from './course-facts.js';
 
 const TYPE_LABEL = {
   regular: 'Coursework',
@@ -115,6 +117,7 @@ export function createDetailPanel(ctx) {
 
   function paint(item, course, isFocus) {
     body.replaceChildren();
+    course = effectiveCourse(course, store.snapshot());
     const state = store.itemState(item.id);
     const band = effortBand(item);
     const where = phase(item, today());
@@ -153,6 +156,10 @@ export function createDetailPanel(ctx) {
       const links = buildLinks(item, course);
       if (links) body.append(links);
     }
+
+    body.append(collapsible('Labels', buildLabels(item)));
+    const attached = Object.entries(store.snapshot().documents || {}).filter(([, record]) => !record.deletedAt && (record.itemIds || []).includes(item.id));
+    if (attached.length) body.append(collapsible('Documents', documentRows(attached, ctx)));
 
     const scoreForm = buildScoreForm(item, course, ctx);
     if (scoreForm) body.append(scoreForm);
@@ -220,6 +227,28 @@ export function createDetailPanel(ctx) {
       });
       body.append(block('Steps from the syllabus', list));
     }
+  }
+
+  function buildLabels(item) {
+    const wrap = el('div', 'truth-content');
+    const labels = store.itemState(item.id).labels || [];
+    const form = el('form', 'truth-form');
+    const field = el('label', 'truth-field');
+    field.append(el('span', 'truth-label', 'Labels, separated by commas'));
+    const input = el('input', 'truth-input');
+    input.value = labels.join(', ');
+    input.placeholder = 'exam, team, writing';
+    field.append(input);
+    const error = el('p', 'truth-error'); error.hidden = true; error.setAttribute('role', 'alert');
+    const save = el('button', 'act small', 'Save labels'); save.type = 'submit';
+    form.append(field, save, error);
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      try { ctx.act(() => store.setLabels(item.id, input.value.split(','))); }
+      catch (problem) { error.textContent = problem.message; error.hidden = false; }
+    });
+    wrap.append(form);
+    return wrap;
   }
 
   function buildActions(item) {

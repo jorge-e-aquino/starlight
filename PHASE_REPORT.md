@@ -249,3 +249,43 @@ phone Full/Light were opened and visually reviewed, including warm light and
 dark appearances. The isolated browser fixture showed loading, empty, read
 error, offline, and first-run states. The recovery selector was tested with
 known and unknown recoverability.
+
+## Phase 7: Materials intake
+
+The in-progress Materials view begins with one drop area. Text materials are
+filed locally by course code/name from the filename or content; ambiguity asks
+for the course. PDF, Word, PowerPoint, and text are read on the device, with
+source-backed policy/topic review cards. Scanned PDFs explain that no selectable
+text was found. Confirmations create stamped decisions; dates remain unchecked.
+Canvas .ics files can enter the same drop area. The personal Canvas feed can be
+checked through a read-only Vercel relay, then checks once daily when Materials
+opens on that device. Calendar matches remain proposals for review.
+
+The user found the earlier mode picker and verbose surfaces burdensome. The
+picker was removed: Now starts with one item and secondary rows open detail;
+Plan's grade exposure and day cluster are short disclosures; Field is now
+Interviews with a visible guide and hidden findings/update tools. Sources became
+Materials, with the file drop primary and Canvas/manual controls behind a
+single disclosure. The five tabs fit at 390 px. The device-local theme choices
+remain.
+
+No new overlay logs. New stamped decisions are `items.<id>.labels` (user
+organization), `courseFacts` (confirmed syllabus policy with source), `topics`
+(confirmed lecture topics and links), and `documents` (file metadata, item
+links, `remote` availability and private `pathname`; bytes are in IndexedDB and
+private Blob storage). These are decisions because they are explicit
+edits/confirmations and the latest edit must win across devices. All four use
+the existing per-field decision stamp mechanism. File bytes are outside the
+overlay and backup. A paired device authorizes uploads and reads with the same
+key used by reminders; the private Blob store uses Vercel OIDC. When offline,
+the file stays in IndexedDB and can sync later.
+
+Checks: full tests and build pass. The actual September 21 backup was imported
+through the app and re-exported with all 14 item records; the only changed
+values were newer session timestamps. Desktop and 390 px phone material review
+were visually inspected. Isolated loading, empty, read-error, offline and
+first-run states were opened. A real MGT 2250 Word syllabus yielded compact
+policy suggestions, none confirmed; a Business Lab PDF saved and reopened with
+an explicit scanned/no-selectable-text result. A text syllabus was extracted,
+reopened, and attached to a live item. Private Blob was connected to Vercel
+production and preview. Hosted upload/download validation follows deployment.

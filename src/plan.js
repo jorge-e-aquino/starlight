@@ -246,7 +246,7 @@ function buildHead(plan, map, ctx) {
       el(
         'p',
         'plan-fine',
-        'The durations are estimates, not measurements. If one of these is smaller than Starlight thinks, correct it on the item and the plan re-flows.'
+        'Times are estimates. Adjust an item to update this plan.'
       )
     );
   }

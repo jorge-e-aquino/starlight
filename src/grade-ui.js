@@ -2,6 +2,7 @@ import { gradePath, pointsAtRisk, dayExposure, courseStanding } from './grade.js
 import { itemValue } from './truth.js';
 import { formatDate } from './data.js';
 import * as store from './state.js';
+import { effectiveCourse } from './course-facts.js';
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -128,7 +129,8 @@ function ledgerLine(standing) {
 // Courses carry unresolved weight questions, like the ECON midterm totals.
 function unresolvedNotes(map) {
   const notes = [];
-  for (const course of map.courses) {
+  for (const original of map.courses) {
+    const course = effectiveCourse(original, store.snapshot());
     const standing = courseStanding(course, store.snapshot());
     if (!standing.reconciled) notes.push(`${course.code}: the listed graded weights add to ${standing.modeledTotal ?? 'an unknown amount'} against ${standing.totalPoints ?? 'an unknown course total'}. Starlight leaves this course out of the grade path until the rule is confirmed.`);
     for (const group of course.groups || []) {
@@ -148,7 +150,8 @@ export function buildGradeSection(map) {
 
   const overlay = store.snapshot();
   const charts = el('div', 'grade-charts');
-  for (const course of map.courses) {
+  for (const original of map.courses) {
+    const course = effectiveCourse(original, overlay);
     const standing = courseStanding(course, overlay);
     if (!standing.reconciled) continue;
     const series = seriesFor(course, overlay);
@@ -165,14 +168,15 @@ export function buildGradeSection(map) {
   }
 
   const list = el('ul', 'grade-courses');
-  for (const course of map.courses) {
+  for (const original of map.courses) {
+    const course = effectiveCourse(original, overlay);
     const standing = courseStanding(course, overlay);
     if (standing.totalPoints === null) continue;
     list.append(el('li', 'grade-course', ledgerLine(standing)));
   }
   section.append(list);
 
-  const anyScored = map.courses.some((course) => courseStanding(course, overlay).scoredCount > 0);
+  const anyScored = map.courses.some((course) => courseStanding(effectiveCourse(course, overlay), overlay).scoredCount > 0);
   if (!anyScored) {
     section.append(
       el(
@@ -192,11 +196,16 @@ export function buildGradeSection(map) {
 
 /** Points at risk, for the Plan header where verdicts already are. */
 export function pointsAtRiskLine(map, phase) {
-  const risk = pointsAtRisk(map.courses, store.snapshot(), phase);
+  const overlay = store.snapshot();
+  const risk = pointsAtRisk(map.courses.map((course) => effectiveCourse(course, overlay)), overlay, phase);
   if (!risk.count) return null;
-  const line = el('p', 'plan-risk');
-  const parts = risk.byCourse.map((entry) => `${entry.code} ${entry.percent === null ? 'weight unknown' : `${entry.percent.toFixed(1)}% of course grade`}`);
-  line.textContent = `In range and unstarted: ${parts.join(' · ')}.`;
+  const line = el('details', 'plan-risk plan-note');
+  const ranked = [...risk.byCourse].sort((a, b) => (b.percent ?? -1) - (a.percent ?? -1));
+  const top = ranked.slice(0, 2).map((entry) => `${entry.code} ${entry.percent === null ? '—' : `${entry.percent.toFixed(1)}%`}`);
+  line.append(el('summary', null, `Unstarted grade exposure · ${top.join(' · ')}${ranked.length > 2 ? ` · +${ranked.length - 2} more` : ''}`));
+  const list = el('ul');
+  ranked.forEach((entry) => list.append(el('li', null, `${entry.code}: ${entry.percent === null ? 'weight unknown' : `${entry.percent.toFixed(1)}% of course grade`}`)));
+  line.append(list);
   return line;
 }
 
@@ -205,19 +214,26 @@ export function pointsAtRiskLine(map, phase) {
  * many high-value deadlines is one event, and it is visible in advance.
  */
 export function dayExposureLine(map, phase) {
-  const days = dayExposure(map.courses, store.snapshot(), phase);
+  const overlay = store.snapshot();
+  const days = dayExposure(map.courses.map((course) => effectiveCourse(course, overlay)), overlay, phase);
   if (!days.length) return null;
   const day = days[0];
-  const names = day.items.map((item) => `${item.title} (${item.courseCode})`).join(', ');
-  const weights = [...new Set(day.items.map((item) => item.courseCode))].map((code) => {
+  const courseCodes = [...new Set(day.items.map((item) => item.courseCode))];
+  const weights = courseCodes.map((code) => {
     const own = day.items.filter((item) => item.courseCode === code);
     const points = own.map((item) => item.gradePoints);
     const percents = own.map((item) => item.gradePercent);
     if (points.every((value) => value !== null)) return `${code} ${points.reduce((sum, value) => sum + value, 0)} points`;
     if (percents.every((value) => value !== null)) return `${code} ${percents.reduce((sum, value) => sum + value, 0).toFixed(1)}%`;
     return `${code} weight unknown`;
-  }).join(' · ');
-  const line = el('p', 'plan-exposure');
-  line.textContent = `${formatDate(day.date, { weekday: 'long', month: 'short', day: 'numeric' })} carries ${weights} across ${day.items.length} deadlines: ${names}. Worth splitting the work before that day.`;
+  });
+  const line = el('details', 'plan-exposure plan-note');
+  line.append(el('summary', null, `${formatDate(day.date, { weekday: 'short', month: 'short', day: 'numeric' })} · ${day.items.length} deadlines · ${courseCodes.join(' + ')}`));
+  const list = el('ul');
+  courseCodes.forEach((code, index) => {
+    list.append(el('li', null, weights[index]));
+    day.items.filter((item) => item.courseCode === code).forEach((item) => list.append(el('li', 'plan-note-item', item.title)));
+  });
+  line.append(list);
   return line;
 }

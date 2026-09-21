@@ -4,6 +4,7 @@ import { createDetailPanel } from './detail.js';
 import { renderMap, starSvg } from './render.js';
 import { renderNow } from './now.js';
 import { renderField } from './field-ui.js';
+import { renderIntake } from './intake-ui.js';
 import { renderPlan } from './plan.js';
 import { renderCheckin, renderEvening } from './ritual.js';
 import { buildDayPlan } from './schedule.js';
@@ -14,8 +15,7 @@ import { toast } from './toast.js';
 import { initTooltips } from './tooltip.js';
 import * as sync from './sync.js';
 import { recordUsefulMoment, startReminderSync } from './push-client.js';
-import { readPreferences, savePreferences, MODES, GROUNDS, SCHEMES } from './attention.js';
-import { buildGradeSection } from './grade-ui.js';
+import { readPreferences, savePreferences, GROUNDS, SCHEMES } from './attention.js';
 
 const app = document.querySelector('#app');
 let preferences = readPreferences();
@@ -49,7 +49,7 @@ const anim = { mount: true, focusChanged: false };
 
 // The chosen view is part of the URL, so a particular way of looking at the
 // semester can be bookmarked or reopened.
-const VIEWS = ['now', 'plan', 'field', 'map', 'checkin', 'evening'];
+const VIEWS = ['now', 'plan', 'field', 'map', 'intake', 'checkin', 'evening'];
 const requestedView = new URLSearchParams(location.search).get('view');
 const startView = VIEWS.includes(requestedView) ? requestedView : 'now';
 
@@ -61,7 +61,8 @@ const ui = {
   checkinStep: 0,
   awayDismissed: false,
   firstRunDismissed: false,
-  paletteOpen: false
+  paletteOpen: false,
+  labelFilter: ''
 };
 
 function itemFromHash(map) {
@@ -84,7 +85,8 @@ try {
     get awayDismissed() { return ui.awayDismissed; },
     get checkinStep() { return ui.checkinStep; },
     get firstRun() { return firstRun; },
-    get attentionMode() { return preferences.mode; },
+    get labelFilter() { return ui.labelFilter; },
+    setLabelFilter: (label) => { ui.labelFilter = label; paint(); },
     get focusItem() { return pickFocus(map.allItems); },
     get mountAnim() { return anim.mount; },
     get focusChanged() { return anim.focusChanged; },
@@ -137,7 +139,7 @@ try {
     shell.replaceChildren(
       buildMasthead(map, focus),
       ...buildAppStates(),
-      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' || (ui.view === 'now' && preferences.mode === 'light') ? [] : buildEdgeTargets(ui.view)),
+      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' || ui.view === 'intake' ? [] : buildEdgeTargets(ui.view)),
       surfaceFor(ui.view),
       ...(ui.paletteOpen ? [buildPalette(map)] : [])
     );
@@ -185,21 +187,10 @@ try {
   function surfaceFor(view) {
     if (view === 'plan') return renderPlan(map, ctx);
     if (view === 'field') return renderField(map, ctx);
+    if (view === 'intake') return renderIntake(map, ctx);
     if (view === 'map') return renderMap(map, ctx);
     if (view === 'checkin') return renderCheckin(map, ctx);
     if (view === 'evening') return renderEvening(map, ctx);
-    if (preferences.mode === 'deep') {
-      const deep = document.createElement('div');
-      deep.className = 'deep-surface';
-      deep.append(renderNow(map, ctx));
-      const grade = buildGradeSection(map);
-      deep.append(grade);
-      const coverage = document.createElement('section');
-      coverage.className = 'deep-coverage';
-      coverage.innerHTML = '<h2>Topic coverage</h2><p>Coverage will appear as exam topics are added.</p>';
-      deep.append(coverage, renderMap(map, ctx));
-      return deep;
-    }
     return renderNow(map, ctx);
   }
 
@@ -260,7 +251,7 @@ try {
 
     const toggle = document.createElement('div');
     toggle.className = 'view-toggle';
-    [['now', 'Now'], ['plan', 'Plan'], ['field', 'Field'], ['map', 'Map']].forEach(([id, label]) => {
+    [['now', 'Now'], ['plan', 'Plan'], ['field', 'Interviews'], ['map', 'Map'], ['intake', 'Materials']].forEach(([id, label]) => {
       const b = document.createElement('button');
       b.textContent = label;
       b.className = ui.view === id ? 'on' : '';
@@ -272,17 +263,6 @@ try {
     checkin.className = 'checkin-link';
     checkin.textContent = 'Check in';
     checkin.addEventListener('click', () => { ui.checkinStep = 0; setView('checkin'); });
-
-    const mode = document.createElement('select');
-    mode.className = 'attention-select';
-    mode.setAttribute('aria-label', 'Attention mode');
-    MODES.forEach((value) => mode.append(new Option(`${value[0].toUpperCase()}${value.slice(1)} mode`, value)));
-    mode.value = preferences.mode;
-    mode.addEventListener('change', () => {
-      preferences = savePreferences({ ...preferences, mode: mode.value });
-      ui.queueExpanded = false; ui.pastExpanded = false; ui.finishedExpanded = false;
-      setView('now');
-    });
 
     const appearance = document.createElement('details');
     appearance.className = 'appearance-menu';
@@ -302,7 +282,7 @@ try {
     jump.setAttribute('aria-label', 'Jump to an item or surface');
     jump.addEventListener('click', () => { ui.paletteOpen = true; paint(); shell.querySelector('.palette-input')?.focus(); });
 
-    right.append(status, checkin, toggle, mode, appearance, jump);
+    right.append(status, checkin, toggle, appearance, jump);
     head.append(left, right);
     return head;
   }
@@ -316,7 +296,7 @@ try {
     input.type = 'search'; input.placeholder = 'Find an item or surface';
     const results = document.createElement('div'); results.className = 'palette-results';
     const entries = [
-      ...[['now', 'Now'], ['plan', 'Plan'], ['field', 'Field'], ['map', 'Map'], ['checkin', 'Check in'], ['evening', 'Evening']].map(([id, label]) => ({ label, sub: 'Surface', run: () => setView(id) })),
+      ...[['now', 'Now'], ['plan', 'Plan'], ['field', 'Interviews'], ['map', 'Map'], ['intake', 'Materials'], ['checkin', 'Check in'], ['evening', 'Evening']].map(([id, label]) => ({ label, sub: 'Surface', run: () => setView(id) })),
       ...map.allItems.map((item) => ({ label: item.title, sub: map.courseById.get(item.courseId)?.code || '', run: () => { ui.paletteOpen = false; ctx.openDetail(item, null, { silent: true }); } }))
     ];
     function show() {

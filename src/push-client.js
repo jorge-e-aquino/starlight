@@ -9,6 +9,7 @@ let started = false;
 
 function key() { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } }
 export function paired() { return Boolean(key()); }
+export function pairingKey() { return key(); }
 export function usefulBefore() { try { return Boolean(localStorage.getItem(USEFUL)); } catch { return false; } }
 export function recordUsefulMoment() { try { localStorage.setItem(USEFUL, String(Date.now())); } catch { /* local use only */ } }
 export function supported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext; }

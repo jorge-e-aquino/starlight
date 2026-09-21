@@ -37,6 +37,17 @@ export function starSvg(size) {
 export function renderMap(map, ctx) {
   const now = today();
   const wrap = el('div', 'map-view');
+  const labels = [...new Set(map.allItems.flatMap((item) => store.itemState(item.id).labels || []))].sort();
+  if (labels.length) {
+    const filter = el('label', 'map-filter');
+    filter.append(el('span', null, 'Label'));
+    const select = el('select'); select.setAttribute('aria-label', 'Filter map by label');
+    const all = el('option', null, 'All items'); all.value = ''; select.append(all);
+    labels.forEach((label) => { const option = el('option', null, label); option.value = label; select.append(option); });
+    select.value = ctx.labelFilter || '';
+    select.addEventListener('change', () => ctx.setLabelFilter(select.value));
+    filter.append(select); wrap.append(filter);
+  }
   const scale = buildScale(map.courses, map.crunchZones);
   const axis = buildAxis(scale);
 
@@ -58,6 +69,11 @@ export function renderMap(map, ctx) {
   track.append(body);
   canvas.append(track);
   wrap.append(canvas, buildLegend());
+  if (ctx.labelFilter) {
+    wrap.querySelectorAll('[data-item-id]').forEach((node) => {
+      if (!(store.itemState(node.dataset.itemId).labels || []).includes(ctx.labelFilter)) node.style.display = 'none';
+    });
+  }
   return wrap;
 }
 

@@ -55,7 +55,7 @@ function contactRows(ctx) {
   const contacts = activeContacts(store.snapshot().contacts);
   if (!contacts.length) {
     wrap.append(
-      el('p', 'field-empty', `No contacts in the ${COURSE} pipeline yet. Add the first person you plan to reach out to; the week's interviews come from the week's messages.`)
+      el('p', 'field-empty', 'Add someone you could talk to this week.')
     );
     return wrap;
   }
@@ -148,21 +148,20 @@ function addContactForm(ctx) {
 // a manual somewhere. When a contact is scheduled, the questions lead.
 function scriptSection(contacts) {
   const script = interviewScript();
-  const wrap = el('section', 'field-script');
-  wrap.append(el('h3', 'section-head', 'How to interview'));
+  const wrap = el('section', 'field-script field-guide');
+  wrap.append(el('p', 'focus-eyebrow', 'MGT 4803 · Business Lab'));
+  wrap.append(el('h3', 'field-guide-title', 'Have a useful interview'));
+  wrap.append(el('p', 'field-guide-intro', 'Ask about a real past experience. Capture what happened; the weekly update can use it later.'));
+  const guide = el('details', 'field-guide-details');
+  guide.append(el('summary', null, contacts.some((contact) => contact.state === 'scheduled') ? 'Open interview guide' : 'See the interview questions'));
+  guide.append(el('h4', null, 'Ask these questions'));
+  const questions = el('ol', 'field-rules field-question-list');
+  script.questions.forEach((question) => questions.append(el('li', null, question)));
+  guide.append(questions, el('h4', null, 'Keep in mind'));
   const list = el('ul', 'field-rules');
   script.rules.forEach((rule) => list.append(el('li', null, rule)));
-  wrap.append(list);
-  const scheduled = contacts.filter((contact) => contact.state === 'scheduled').length;
-  if (scheduled) {
-    const open = el('details', 'collapsible field-questions');
-    const summary = document.createElement('summary');
-    summary.textContent = `Questions for the ${scheduled} scheduled ${scheduled === 1 ? 'interview' : 'interviews'}`;
-    const questions = el('ul', 'field-rules');
-    script.questions.forEach((question) => questions.append(el('li', null, question)));
-    open.append(summary, questions);
-    wrap.append(open);
-  }
+  guide.append(list);
+  wrap.append(guide);
   return wrap;
 }
 
@@ -333,7 +332,8 @@ export function renderField(map, ctx) {
   const contacts = activeContacts(snapshot.contacts || {});
   const health = pipelineHealth(snapshot.contacts || {});
 
-  root.append(el('h2', 'field-title', `${COURSE} pipeline`));
+  root.append(el('h2', 'field-title', 'Interviews & evidence'));
+  root.append(scriptSection(contacts));
 
   const lab = map.courses.find((course) => course.code === COURSE);
   const gap = cadenceGap(
@@ -347,10 +347,10 @@ export function renderField(map, ctx) {
         'p',
         'field-cadence',
         gap.basis === 'calendar'
-          ? `Work on ${gap.title} (${COURSE}) has not started. Wednesday's update needs outreach now; the listed date is ${when} and is not yet verified.`
+          ? `Next update: ${when} (unverified). Reach out to someone now.`
           : gap.gapDays > 0
-            ? `Work on ${gap.title} (${COURSE}) has not started. Your recent updates started ${gap.typicalLead} days ahead of the deadline, and that day ${gap.gapDays === 1 ? 'was yesterday' : `was ${gap.gapDays} days ago`}. Check the listed date, ${when}.`
-            : `Work on ${gap.title} (${COURSE}) has not started. Your recent updates started ${gap.typicalLead} days ahead, which points to today or tomorrow. Check the listed date, ${when}.`
+            ? `Next update: ${when} (unverified). Outreach usually starts earlier.`
+            : `Next update: ${when} (unverified). Time for outreach.`
       )
     );
   }
@@ -361,15 +361,16 @@ export function renderField(map, ctx) {
     el(
       'p',
       'field-health',
-      `Contacted now: ${health.inContacted}. Interviews next week come from messages sent this week.${health.followUpsDue ? ` ${health.followUpsDue} ${health.followUpsDue === 1 ? 'follow-up is' : 'follow-ups are'} due.` : ''}`
+      `${health.inContacted} contacted · ${health.scheduled} scheduled${health.followUpsDue ? ` · ${health.followUpsDue} to follow up` : ''}`
     )
   );
   pipeline.append(contactRows(ctx));
   pipeline.append(addContactForm(ctx));
   root.append(pipeline);
-
-  root.append(scriptSection(contacts));
-  root.append(addFindingForm(ctx));
-  root.append(draftSection(map, ctx));
+  const findings = addFindingForm(ctx);
+  const draft = draftSection(map, ctx);
+  const tools = el('details', 'field-more');
+  tools.append(el('summary', null, 'Findings & weekly update'), findings, draft);
+  root.append(tools);
   return root;
 }
