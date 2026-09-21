@@ -27,6 +27,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 
 // Read before recording, or the away report compares now against now.
 const previousVisit = store.lastVisit();
+const firstRun = !previousVisit && Object.keys(store.snapshot().items).length === 0;
 store.recordVisit();
 
 const anim = { mount: true, focusChanged: false };
@@ -42,7 +43,8 @@ const ui = {
   queueExpanded: false,
   pastExpanded: false,
   finishedExpanded: false,
-  awayDismissed: false
+  awayDismissed: false,
+  firstRunDismissed: false
 };
 
 function itemFromHash(map) {
@@ -109,6 +111,7 @@ try {
     lastFocusId = focus ? focus.id : null;
     shell.replaceChildren(
       buildMasthead(map, focus),
+      ...buildAppStates(),
       ...(ui.view === 'map' ? [] : buildEdgeTargets(ui.view)),
       surfaceFor(ui.view)
     );
@@ -117,6 +120,40 @@ try {
       detail.repaint(item, map.courseById.get(item.courseId), Boolean(focus && focus.id === item.id));
     }
     if (ui.view === 'map') centerOn(focus);
+  }
+
+  function buildAppStates() {
+    const nodes = [];
+    const health = store.storageStatus();
+    if (health.readError || health.writeError || !navigator.onLine) {
+      const status = document.createElement('p');
+      status.className = 'app-status';
+      status.setAttribute('role', 'status');
+      status.dataset.state = health.readError || health.writeError ? 'error' : 'offline';
+      status.textContent = health.readError
+        ? 'This device could not read saved progress. The original stays in storage. Restore a progress backup below.'
+        : health.writeError
+          ? 'This device cannot save changes right now. Export your progress before closing.'
+          : 'Offline. Your saved semester stays available. Sync will resume when you reconnect.';
+      nodes.push(status);
+    }
+    if (firstRun && !ui.firstRunDismissed && !health.readError) {
+      const intro = document.createElement('section');
+      intro.className = 'first-run';
+      const title = document.createElement('h2');
+      title.className = 'state-title';
+      title.textContent = 'A place to start';
+      const copy = document.createElement('p');
+      copy.className = 'state-copy';
+      copy.textContent = 'Now offers one thing to start. Plan shapes today. Map holds the semester. Use Import progress below to bring your saved work here.';
+      const button = document.createElement('button');
+      button.className = 'act';
+      button.textContent = 'Open my semester';
+      button.addEventListener('click', () => { ui.firstRunDismissed = true; paint(); });
+      intro.append(title, copy, button);
+      nodes.push(intro);
+    }
+    return nodes;
   }
 
   function surfaceFor(view) {
@@ -234,6 +271,8 @@ try {
 
   initTooltips();
   paint();
+  window.addEventListener('online', () => paint());
+  window.addEventListener('offline', () => paint());
 
   // A deep link opens the item without counting as a look, so sharing a URL
   // cannot fabricate a circling signal.
@@ -285,8 +324,14 @@ try {
 
 } catch (err) {
   const box = document.createElement('div');
-  box.className = 'error';
+  box.className = 'error app-error';
+  box.setAttribute('role', 'alert');
   box.textContent = `Starlight could not build the map: ${err.message}`;
+  const retry = document.createElement('button');
+  retry.className = 'act';
+  retry.textContent = 'Try opening again';
+  retry.addEventListener('click', () => location.reload());
+  box.append(retry);
   app.replaceChildren(box);
   console.error(err, 'Course ids in the schema:', listCourseIds());
 }

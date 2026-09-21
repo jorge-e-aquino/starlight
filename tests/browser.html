@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Starlight state checks</title>
+<label>State <select id="state">
+  <option value="first">First run</option>
+  <option value="offline">Offline</option>
+  <option value="empty">Nothing in range</option>
+  <option value="read-error">Unreadable saved progress</option>
+  <option value="write-error">Storage unavailable</option>
+  <option value="loading">Loading</option>
+</select></label>
+<button id="show">Show state</button>
+<p>These checks use isolated memory. They leave this browser's saved progress alone.</p>
+<iframe id="preview" title="Starlight state preview" style="width:100%;height:85vh;border:0"></iframe>
+<script type="module">
+const schema = await fetch('/course_map_schema_v2.json').then(r => r.json());
+const show = () => {
+  const state = document.querySelector('#state').value;
+  const overlay = { items: {} };
+  if (state === 'empty') for (const course of schema.courses) for (const item of course.items) {
+    overlay.items[item.id] = { doneAt: 1, _t: { doneAt: 1 } };
+  }
+  const raw = state === 'read-error' ? '{unreadable' : state === 'first' ? null : JSON.stringify(overlay);
+  document.querySelector('#preview').srcdoc = `<html><head><base href="/"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="app"><p class="app-loading" role="status">Opening your semester…</p></div><script type="module">
+    const values = new Map(${JSON.stringify(raw == null ? [] : [['starlight.v1', raw]])});
+    Object.defineProperty(window, 'localStorage', { value: {
+      getItem: key => values.get(key) ?? null,
+      setItem: (key, value) => { if (${JSON.stringify(state)} === 'write-error') throw new Error('Storage unavailable'); values.set(key, value); },
+      removeItem: key => values.delete(key)
+    }});
+    Object.defineProperty(navigator, 'onLine', { get: () => ${state !== 'offline'} });
+    ${state === 'loading' ? "import '/src/styles.css';" : "import('/src/main.js');"}
+  <\/script></body></html>`;
+};
+document.querySelector('#show').addEventListener('click', show);
+show();
+</script>
+</html>

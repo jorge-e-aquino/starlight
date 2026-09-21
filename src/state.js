@@ -4,13 +4,28 @@
 import { mergeState } from './merge.js';
 
 const KEY = 'starlight.v1';
+const storageHealth = { readError: null, writeError: null };
+
+function validateOverlay(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      !value.items || typeof value.items !== 'object' || Array.isArray(value.items) ||
+      Object.values(value.items).some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
+    throw new Error('Choose a Starlight progress backup with an items object.');
+  }
+  return value;
+}
+
+export function storageStatus() {
+  return { ...storageHealth };
+}
 
 function read() {
   try {
     const raw = localStorage.getItem(KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
+    const parsed = raw ? validateOverlay(JSON.parse(raw)) : {};
     return { items: {}, ...parsed };
-  } catch {
+  } catch (error) {
+    storageHealth.readError = error.message;
     return { items: {} };
   }
 }
@@ -23,10 +38,11 @@ const writeListeners = new Set();
 
 function commit() {
   try {
+    if (storageHealth.readError) throw new Error('Restore a readable backup before saving on this device.');
     localStorage.setItem(KEY, JSON.stringify(store));
-  } catch {
-    // Private browsing or blocked storage. The session still works, it just
-    // will not remember anything, which is better than throwing.
+    storageHealth.writeError = null;
+  } catch (error) {
+    storageHealth.writeError = error.message;
   }
   listeners.forEach((fn) => fn());
   writeListeners.forEach((fn) => fn());
@@ -254,12 +270,12 @@ export function exportState() {
 }
 
 export function importState(json) {
-  const incoming = JSON.parse(json);
-  if (!incoming || typeof incoming !== 'object') throw new Error('Not a Starlight backup');
+  const incoming = validateOverlay(JSON.parse(json));
   // Imports go through the same merge as a sync. A backup is just another copy
   // of the overlay, so restoring an old one should not silently undo work done
   // since it was taken.
   store = mergeState(store, incoming);
+  storageHealth.readError = null;
   commit();
 }
 
