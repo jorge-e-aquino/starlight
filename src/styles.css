@@ -2518,3 +2518,23 @@ button { font: inherit; color: inherit; }
 @media (max-width: 560px) {
   .truth-form { grid-template-columns: 1fr; }
 }
+
+/* --- Grade path (Phase 2) --- */
+
+.grade-path { margin-top: var(--space-24); }
+.grade-charts { display: grid; gap: var(--space-8); margin-top: var(--space-10); }
+.grade-course-path { border: var(--rule); border-radius: var(--space-12); padding: var(--space-8) var(--space-12); background: var(--surface-panel); }
+.grade-course-path summary { cursor: pointer; font-size: var(--text-control); font-weight: var(--weight-650); color: var(--ink); }
+.grade-course-path .grade-chart { margin-top: var(--space-8); }
+.grade-chart { width: 100%; height: auto; display: block; }
+.grade-chart .track-ceiling { fill: none; stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.grade-chart .track-floor { fill: none; stroke: var(--danger-ink); stroke-width: 1.5; }
+.grade-chart .track-current { fill: none; stroke: var(--accent-ink); stroke-width: 2.25; }
+.grade-chart .exam-mark { fill: var(--crunch-ink); }
+.grade-legend { margin: var(--space-6) 0 0; font-size: var(--text-control); color: var(--ink-faint); line-height: var(--leading-1-45); }
+.grade-courses { margin: var(--space-11) 0 0; padding: 0; list-style: none; display: grid; gap: var(--space-4); }
+.grade-course { font-size: var(--text-control); color: var(--ink-soft); }
+.grade-fine { margin: var(--space-11) 0 0; font-size: var(--text-control); color: var(--ink-faint); line-height: var(--leading-1-45); }
+.grade-conflict { margin: var(--space-11) 0 0; font-size: var(--text-control); color: var(--state-conflict-ink); line-height: var(--leading-1-45); }
+.plan-risk { margin: var(--space-6) 0 0; font-size: var(--text-body-compact); color: var(--ink-soft); }
+.plan-exposure { margin: var(--space-6) 0 0; font-size: var(--text-body-compact); color: var(--crunch-ink); }

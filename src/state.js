@@ -179,6 +179,18 @@ export function setExternalBlock(id, value) {
   patch(id, { externalBlock: structuredClone(value) });
 }
 
+// A posted score is a decision about the result. It is separate from a
+// submission, because submitting says nothing about how it was graded.
+export function setScore(id, value) {
+  if (value !== null && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
+    throw new Error('Enter a nonnegative score.');
+  }
+  if (value !== null && (itemState(id).externalBlock || ['cant-submit', 'absorbed'].includes(itemState(id).resolution?.state))) {
+    throw new Error('Clear the block or correct the outcome before recording a score.');
+  }
+  patch(id, value === null ? { score: null } : { score: value, doneAt: itemState(id).doneAt || Date.now() });
+}
+
 /**
  * The shape of one particular day: when work can actually start, and the time
  * already claimed by something else. A plan that packs from "now" assumes the

@@ -43,7 +43,11 @@ function capacity(group) {
   return Math.max(0, group.countTotal - group.countRequired);
 }
 
-function itemValue(course, item) {
+export function itemValue(course, item) {
+  return itemValueOf(course, item);
+}
+
+function itemValueOf(course, item) {
   const group = groupFor(course, item);
   const points = nonnegative(item.points) ? item.points
     : nonnegative(group?.pointsPerItem) ? group.pointsPerItem
@@ -60,7 +64,8 @@ function resolution(item, overlay) {
   return RESOLUTIONS.has(value?.state) ? value : null;
 }
 
-function cushions(course, overlay) {
+/** Cushion balances per group; `allocated` holds the covered item ids. */
+export function cushions(course, overlay) {
   return (course.groups || []).map((group) => {
     const available = capacity(group);
     const claims = (course.items || []).filter((item) => {

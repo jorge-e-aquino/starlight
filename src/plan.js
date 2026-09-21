@@ -16,7 +16,9 @@ import {
   EFFORT_MINUTES
 } from './schedule.js';
 import { dateBadge, dateText } from './truth-ui.js';
-import { effortBand, EFFORT, completionVerb, daysUntil, effectiveStatus } from './signals.js';
+import { buildGradeSection, pointsAtRiskLine, dayExposureLine } from './grade-ui.js';
+import { effortBand, EFFORT, completionVerb, daysUntil, effectiveStatus, phase } from './signals.js';
+import { today } from './clock.js';
 import * as store from './state.js';
 
 /**
@@ -137,6 +139,10 @@ export function renderPlan(map, ctx) {
   if (ctx.mountAnim) root.classList.add('mounting');
 
   root.append(buildHead(plan, map, ctx));
+  const risk = pointsAtRiskLine(map, (item) => phase(item, today()));
+  if (risk) root.append(risk);
+  const exposure = dayExposureLine(map, (item) => phase(item, today()));
+  if (exposure) root.append(exposure);
 
   const ask = buildAsk(map, ctx);
   if (ask) root.append(ask);
@@ -152,6 +158,8 @@ export function renderPlan(map, ctx) {
 
   const tail = buildTail(plan, map, ctx);
   if (tail) root.append(tail);
+
+  root.append(buildGradeSection(map));
 
   // A reorder moves the chosen block to the top of a page you had scrolled down
   // to find it on, so the plan follows the choice rather than making you hunt.

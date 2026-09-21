@@ -15,6 +15,7 @@
       "code": "MGT 2250",
       "color": "#5c6ba8",
       "totalPoints": 585,
+      "latePolicy": { "status": "unknown", "source": null },
       "groups": [
         {
           "id": "mgt2250-hw",
@@ -35,6 +36,7 @@
           "label": "Tests",
           "countRequired": 3,
           "countTotal": 3,
+          "scoreRule": "replace-lowest-with-mean",
           "note": "Lowest replaced by average of all 3 — every test still must be fully prepared for"
         }
       ],
@@ -460,6 +462,7 @@
       "code": "ECON 2105",
       "color": "#c98a3e",
       "totalPoints": 500,
+      "latePolicy": { "status": "unknown", "source": null },
       "groups": [
         {
           "id": "econ-coursework",
@@ -1004,6 +1007,7 @@
       "code": "MGT 3101",
       "color": "#a84e6b",
       "totalPoints": 1000,
+      "latePolicy": { "status": "unknown", "source": null },
       "groups": [
         {
           "id": "ob-journals",
@@ -1011,7 +1015,8 @@
           "countRequired": 8,
           "countTotal": 10,
           "note": "Submit 8 of 10, 25pts pass/1pt nonpass — drop cushion does NOT reduce urgency of any single journal. Cannot submit for a class you didn't attend (falsifying attendance).",
-          "pointsPerItem": 25
+          "pointsPerItem": 25,
+          "latePolicy": { "status": "never", "source": "course ground truth" }
         },
         {
           "id": "ob-memos",
@@ -1019,7 +1024,8 @@
           "countRequired": 6,
           "countTotal": 7,
           "note": "Submit 6 of 7 (presenting counts as one), 25pts pass/1pt nonpass — same no-deprioritize rule. ~500 words / one page required for a pass.",
-          "pointsPerItem": 25
+          "pointsPerItem": 25,
+          "latePolicy": { "status": "never", "source": "course ground truth" }
         },
         {
           "id": "ob-tests",
@@ -1308,6 +1314,7 @@
         {
           "id": "ob-proposal",
           "title": "Final Project 1-page Proposal",
+          "gradingRole": "milestone",
           "type": "regular",
           "group": null,
           "date": "2026-11-01",
@@ -1334,6 +1341,7 @@
         {
           "id": "ob-presentations",
           "title": "Consulting Project Presentations",
+          "gradingRole": "milestone",
           "type": "regular",
           "group": null,
           "date": "2026-11-18",
@@ -1374,6 +1382,7 @@
         {
           "id": "ob-extracredit",
           "title": "Extra Credit Activities",
+          "gradingRole": "extra-credit",
           "type": "regular",
           "group": null,
           "date": null,
@@ -1392,6 +1401,9 @@
       "code": "MGT 4803",
       "color": "#3e8f6b",
       "totalPoints": null,
+      "latePolicy": { "status": "unknown", "source": null },
+      "attendancePolicy": { "freeAbsences": 2, "courseGradePointsPerAdditionalAbsence": 3 },
+      "peerFactorRange": { "min": 0.75, "max": 1.05 },
       "groups": [
         {
           "id": "biz-updates",
@@ -1443,6 +1455,7 @@
         {
           "id": "biz-pitch",
           "title": "Problem Pitch & Team Formation",
+          "gradingRole": "milestone",
           "type": "regular",
           "group": null,
           "date": "2026-09-09",
@@ -1625,6 +1638,7 @@
         {
           "id": "biz-finalvideo",
           "title": "Final Video, Prototype & Materials",
+          "gradingRole": "milestone",
           "type": "final",
           "group": null,
           "date": "2026-12-08",

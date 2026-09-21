@@ -63,11 +63,53 @@ nothing here unions, so nothing needed a `LOG_FIELDS` cap.
 - Signals caches the prerequisite projection per item list per day and
   invalidates on every overlay write, so inherited urgency is live and cheap.
 
-## What Phase 2 needs from the user
+---
 
-Nothing blocking. Phase 2 (grade simulator, three-track grade path, points at
-risk in Plan only, day exposure) can proceed on the pure-truth layer above.
-The known sync.js privacy issue (snapshot serialized wholesale, including
-avoidance logs) still needs a user decision before any change to what leaves
-the device; a concrete proposal is due before Phase 4 and applies earlier if
-sync behavior is touched.
+# Phase 2 report: Consequence
+
+Committed after Phase 1. No new overlay fields in this phase, so no merge
+classification is needed; the simulator is pure over schema, overlay, and
+hypothetical scores.
+
+## What landed
+
+- `src/grade.js`, pure and node-tested: `courseStanding`, `gradePath`,
+  `cushionCovered`, `pointsAtRisk`, `dayExposure`.
+  - Locked outcomes are policy facts: can't submit contributes 0, an absorbed
+    item banked within its group's cushion balance banks its points, a claim
+    past the balance is gone. Cushion coverage still comes from truth.js, and
+    a cushion never lowers urgency anywhere.
+  - A done item with no score is graded but unscored: the standing leaves it
+    out and says so. No score is ever inferred from marking submitted.
+  - The ceiling collapses to null once an unknown-weight item enters the
+    ledger; the app states the unknown rather than inventing a number.
+- `src/grade-ui.js`: the Plan surface gets "Where the grades stand", a single
+  combined three-track chart (floor, ceiling, current) with markers on the
+  remaining heavy items, per-course ledger lines, the incomplete-ledger note,
+  and the ECON midterm discrepancy surfaced from the schema's unresolved note.
+- Plan header now carries points at risk and the next exposed day. Both stay
+  off the Now surface.
+- `tests/grade.test.js`, wired into `npm test`: the September failure (18 of
+  45 in the synthetic course), cushion capacity and overflow, submit-is-not-
+  score, the path's capped ceiling, points at risk excluding blocked and
+  resolved work, and the two-deadline-one-day flag.
+
+## Checks run
+
+- `npm test`: all five suites passing.
+- `npm run build`: clean.
+- Visual inspection of the chart at desktop and phone widths is with the user,
+  who is handling review and browser verification.
+
+## Open product decisions for the user
+
+- Day-exposure threshold: 8 points and at least two deadlines. The 17 September
+  day (18 points, two items) is the case it exists for, but the threshold is a
+  guess. Say the word and it moves.
+- Whether single-item days should ever be flagged; currently never.
+
+## What Phase 3 needs
+
+Nothing new from the user. Phase 3 is the approved editorial visual pass and
+must express every state Phase 1 and 2 produced: date trust, blocked, resolved,
+prerequisite links, points at risk, and the grade path.

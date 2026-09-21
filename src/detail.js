@@ -10,6 +10,7 @@ import {
   gatedBy
 } from './signals.js';
 import { dueTimeFor, hasDueTime, schemaTime, pomodorosFor } from './schedule.js';
+import { buildScoreForm } from './grade-ui.js';
 import {
   dateBadge,
   dateText,
@@ -66,6 +67,9 @@ export function createDetailPanel(ctx) {
   document.addEventListener('click', (event) => {
     if (!panel.classList.contains('open')) return;
     if (panel.contains(event.target)) return;
+    // Opening a map item can repaint the whole map before this document
+    // listener runs. The original trigger still identifies that same click.
+    if (lastFocused && (event.target === lastFocused || lastFocused.contains(event.target))) return;
     // A control inside the panel that changes state repaints the panel, which
     // detaches the very button that was clicked before this listener sees it.
     // Without this the panel would contain() a node that is no longer anywhere
@@ -150,6 +154,9 @@ export function createDetailPanel(ctx) {
       if (links) body.append(links);
     }
 
+    const scoreForm = buildScoreForm(item, course, ctx);
+    if (scoreForm) body.append(scoreForm);
+
     const ring = avoidance(item);
     if (ring) {
       const note = document.createDocumentFragment();
@@ -197,6 +204,8 @@ export function createDetailPanel(ctx) {
     }
     const group = item.group ? course.groupsById.get(item.group) : null;
     if (group) dl.append(row('Group', group.label));
+    const latePolicy = group?.latePolicy || course.latePolicy;
+    if (latePolicy) dl.append(row('Late submission', latePolicy.status === 'never' ? 'Not accepted under this course rule' : 'Policy not confirmed'));
 
     body.append(collapsible('Grade detail', dl));
     if (group && group.note) body.append(block('Group rule', el('p', null, group.note)));
