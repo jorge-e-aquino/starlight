@@ -13,9 +13,10 @@ import {
   doneAt,
   awayReport,
   completionVerb,
-  effectiveStatus
+  effectiveStatus,
+  phase
 } from './signals.js';
-import { dueTodayItems } from './schedule.js';
+import { dueTodayItems, dueAt, upcomingExamWithin } from './schedule.js';
 import { dateBadge, resolutionLabel } from './truth-ui.js';
 import * as store from './state.js';
 import { buildPrepNotice } from './exam-ui.js';
@@ -67,12 +68,14 @@ export function renderNow(map, ctx) {
 
   root.append(focus ? buildFocus(focus, items, map, ctx, now) : buildClear(items, map, ctx, now));
 
-  const dueToday = dueTodayItems(items).filter((it) => !store.isSnoozed(it.id));
-  if (dueToday.length) root.append(buildPlanLink(dueToday, items, ctx));
+  const featuredExam = upcomingExamWithin(items, now);
+  const dayItems = todaySliceItems(items, now);
+  root.append(buildDaySlice(dayItems, ctx, featuredExam));
 
-  const rest = live.slice(1);
+  const shownToday = new Set(dayItems.slice(0, 3).map((item) => item.id));
+  const rest = live.slice(1).filter((item) => item.id !== featuredExam?.id && !shownToday.has(item.id));
   if (rest.length) root.append(buildQueue(rest, map, ctx, now));
-  const prep = !ctx.firstRun || ctx.firstRunDismissed ? buildPrepNotice(map, ctx) : null;
+  const prep = !featuredExam && (!ctx.firstRun || ctx.firstRunDismissed) ? buildPrepNotice(map, ctx) : null;
   if (prep) root.append(prep);
 
   const horizon = horizonItem(items, now);
@@ -131,20 +134,51 @@ function buildRecovery(recovery, map, ctx, now) {
   return card;
 }
 
-/**
- * One line, not a schedule. Now stays a single-thing surface; when the day
- * actually has deadlines on it, this is the door to the hour by hour version
- * rather than the version itself.
- */
-function buildPlanLink(dueToday, items, ctx) {
-  const wrap = el('p', 'plan-link');
-  const btn = el('button', 'linky', 'Plan the day by the hour');
-  btn.addEventListener('click', ctx.openPlan);
-  wrap.append(
-    document.createTextNode('Deadlines land today. '),
-    btn
-  );
-  return wrap;
+// A narrow view of today keeps the map's useful orientation near the next start.
+// The full semester stays behind Map and the hourly ordering stays in Plan.
+function todaySliceItems(items, now) {
+  return dueTodayItems(items, now)
+    .filter((item) => phase(item, now) !== 'resolved' && !store.isSnoozed(item.id))
+    .sort((a, b) => (dueAt(a)?.getTime() ?? Infinity) - (dueAt(b)?.getTime() ?? Infinity));
+}
+
+function buildDaySlice(todayItems, ctx, nextExam) {
+  const section = el('section', 'day-slice');
+  const head = el('div', 'day-slice-head');
+  head.append(el('h2', null, 'Today'));
+  const mapButton = el('button', 'linky', 'Map');
+  mapButton.addEventListener('click', ctx.openMap);
+  head.append(mapButton);
+  section.append(head);
+  if (!todayItems.length) section.append(el('p', 'day-slice-empty', 'Nothing due today.'));
+  else {
+    todayItems.slice(0, 3).forEach((item) => {
+      const row = el('button', 'day-slice-row');
+      row.style.setProperty('--course-color', ctx.map.courseById.get(item.courseId).color);
+      row.append(el('strong', null, item.title), el('span', null, item.courseCode));
+      row.append(dateBadge(item));
+      row.addEventListener('click', () => ctx.openDetail(item, row));
+      section.append(row);
+    });
+    if (todayItems.length > 3) {
+      const more = el('button', 'linky day-slice-more', `${todayItems.length - 3} more on the map`);
+      more.addEventListener('click', ctx.openMap);
+      section.append(more);
+    }
+    const plan = el('button', 'linky day-slice-plan', 'Plan today');
+    plan.addEventListener('click', ctx.openPlan);
+    section.append(plan);
+  }
+  if (nextExam) {
+    const exam = el('button', 'day-slice-exam');
+    exam.style.setProperty('--course-color', ctx.map.courseById.get(nextExam.courseId).color);
+    exam.append(el('span', null, `Coming up · ${nextExam.dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`),
+      el('strong', null, `${nextExam.courseCode} · ${nextExam.title}`));
+    exam.append(dateBadge(nextExam));
+    exam.addEventListener('click', () => ctx.openDetail(nextExam, exam));
+    section.append(exam);
+  }
+  return section;
 }
 
 // Orientation after a gap, stated as movement rather than as a backlog.

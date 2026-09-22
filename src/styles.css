@@ -1306,6 +1306,19 @@ button { font: inherit; color: inherit; }
   gap: var(--space-26);
 }
 
+.day-slice { display: grid; gap: var(--space-8); padding: var(--space-12) 0; border-top: var(--space-1) solid var(--rule); border-bottom: var(--space-1) solid var(--rule); }
+.day-slice-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); }
+.day-slice-head h2 { margin: 0; color: var(--ink); font-size: var(--text-heading); font-weight: var(--weight-650); }
+.day-slice-head .linky, .day-slice-more, .day-slice-plan { display: inline-flex; align-items: center; min-height: var(--target-touch); }
+.day-slice-empty { margin: 0; color: var(--ink-soft); font-size: var(--text-control); }
+.day-slice-row, .day-slice-exam { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-8); width: 100%; min-height: var(--target-touch); padding: var(--space-8) var(--space-12); border: 0; border-left: var(--space-3) solid var(--course-color); border-radius: var(--space-8); background: var(--surface-panel); color: var(--ink); text-align: left; cursor: pointer; }
+.day-slice-row strong, .day-slice-exam strong { font-size: var(--text-body-small); }
+.day-slice-row > span:not(.date-badge), .day-slice-exam > span:not(.date-badge) { color: var(--ink-soft); font-size: var(--text-small); }
+.day-slice-row .date-badge, .day-slice-exam .date-badge { margin-left: auto; }
+.day-slice-row:hover, .day-slice-exam:hover { background: var(--surface-hover); }
+.day-slice-exam { margin-top: var(--space-6); }
+.day-slice-more, .day-slice-plan { justify-self: start; font-size: var(--text-small); }
+
 .section-head {
   font-size: var(--text-label);
   font-weight: var(--weight-650);

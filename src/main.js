@@ -102,6 +102,7 @@ try {
     togglePast: () => { ui.pastExpanded = !ui.pastExpanded; paint(); },
     dismissAway: () => { ui.awayDismissed = true; paint(); },
     openPlan: () => setView('plan'),
+    openMap: () => setView('map'),
     openMaterials: () => setView('intake'),
     openStudy: (exam) => { ui.studyExamId = exam.id; detail.hide(); setView('study'); },
     closeStudy: (exam) => { setView('now'); ctx.openDetail(exam, null, { silent: true }); },

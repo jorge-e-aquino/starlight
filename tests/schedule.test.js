@@ -20,6 +20,11 @@ try {
   const summary = item('summary', '23:30', { points: 2.5 });
   const econ = item('econ', '23:59', { title: 'ECON coursework', courseId: 'econ2105',
     courseCode: 'ECON 2105', group: 'econ-coursework', points: 9, schemaIndex: 1 });
+  const soonExam = item('soon-exam', null, { type: 'exam', dateObj: new Date(2026, 8, 24, 12) });
+  const farExam = item('far-exam', null, { type: 'exam', dateObj: new Date(2026, 9, 22, 12) });
+  assert.equal(schedule.upcomingExamWithin([test, soonExam, farExam], dateObj)?.id, 'soon-exam');
+  state.markDone('soon-exam');
+  assert.equal(schedule.upcomingExamWithin([test, soonExam, farExam], dateObj), null);
 
   const late = schedule.buildDayPlan([test, expired, summary, econ], new Date(2026, 8, 21, 23, 5));
   assert.deepEqual(late.examEvents.map((entry) => entry.id), ['test']);

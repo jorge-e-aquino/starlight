@@ -137,6 +137,12 @@ export function dueTodayItems(items, at = rightNow()) {
   );
 }
 
+export function upcomingExamWithin(items, at = rightNow(), days = 7) {
+  return items.filter((item) => isExam(item) && item.dateObj && !['done', 'resolved'].includes(phase(item, at)))
+    .filter((item) => { const left = daysUntil(item.dateObj, at); return left > 0 && left <= days; })
+    .sort((a, b) => a.dateObj - b.dateObj)[0] || null;
+}
+
 export function finishedToday(items, at = rightNow()) {
   return items.filter((it) => {
     const done = itemState(it.id).doneAt;
