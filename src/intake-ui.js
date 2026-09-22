@@ -195,6 +195,29 @@ export function renderIntake(map, ctx) {
     row.append(remove); knowledge.append(row);
   });
   advanced.append(knowledge);
+  const context = el('details', 'intake-card'); context.append(el('summary', 'intake-section-summary', 'Past context'));
+  context.append(el('p', 'fine', 'Import an earlier chat or note once. It becomes searchable context, not a course fact or verified date.'));
+  const importer = el('input', 'truth-input'); importer.type = 'file'; importer.accept = '.txt,.md,.json,text/plain,text/markdown,application/json';
+  importer.setAttribute('aria-label', 'Import past chat or note');
+  const importStatus = el('p', 'fine'); importStatus.setAttribute('role', 'status');
+  importer.addEventListener('change', async () => {
+    const file = importer.files?.[0]; if (!file) return;
+    try {
+      if (file.size > 60000) throw new Error('Choose a text export under 60 KB, or split a longer one.');
+      const text = await file.text();
+      ctx.act(() => store.saveContextNote(crypto.randomUUID(), { title: file.name, text, source: 'One-time import' }));
+    } catch (error) { importStatus.textContent = error.message; }
+  });
+  context.append(importer, importStatus);
+  const notes = Object.entries(store.snapshot().notes || {}).filter(([, note]) => !note.deletedAt);
+  if (!notes.length) context.append(el('p', 'fine', 'No past context imported.'));
+  notes.forEach(([id, note]) => {
+    const row = el('div', 'knowledge-row'); row.append(el('span', null, note.title));
+    const remove = el('button', 'linky', 'Remove'); remove.setAttribute('aria-label', `Remove ${note.title}`);
+    remove.addEventListener('click', () => ctx.act(() => store.removeContextNote(id)));
+    row.append(remove); context.append(row);
+  });
+  advanced.append(context);
   root.append(advanced);
   return root;
 }

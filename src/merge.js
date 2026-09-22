@@ -24,7 +24,7 @@
 
 // Observation logs. Value is the cap the writer already applies, reapplied here
 // so a merge of two full logs cannot grow past what either side would keep.
-const LOG_FIELDS = { opens: 40, focusDays: 60, sheetDrafts: 20, cardReviews: 80 };
+const LOG_FIELDS = { opens: 40, focusDays: 60, sheetDrafts: 20, cardReviews: 80, draftHistory: 12 };
 
 // Never synced. A running pomodoro belongs to the device you are sitting at, and
 // the sound setting is a property of the room you are in, not of the semester.
@@ -135,6 +135,7 @@ export function mergeState(local = {}, remote = {}) {
     courseFacts: mergeCollection(local.courseFacts, remote.courseFacts),
     topics: mergeCollection(local.topics, remote.topics),
     documents: mergeCollection(local.documents, remote.documents),
+    notes: mergeCollection(local.notes, remote.notes),
     lastVisit: Math.max(local.lastVisit || 0, remote.lastVisit || 0) || null
   };
   // The local device's own timer and sound survive the merge untouched.

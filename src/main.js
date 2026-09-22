@@ -6,6 +6,7 @@ import { renderNow } from './now.js';
 import { renderField } from './field-ui.js';
 import { renderIntake } from './intake-ui.js';
 import { renderStudy } from './study-ui.js';
+import { renderAssistant } from './assistant-ui.js';
 import { renderPlan } from './plan.js';
 import { renderCheckin, renderEvening } from './ritual.js';
 import { buildDayPlan } from './schedule.js';
@@ -50,7 +51,7 @@ const anim = { mount: true, focusChanged: false };
 
 // The chosen view is part of the URL, so a particular way of looking at the
 // semester can be bookmarked or reopened.
-const VIEWS = ['now', 'plan', 'field', 'map', 'intake', 'checkin', 'evening', 'study'];
+const VIEWS = ['now', 'plan', 'field', 'map', 'intake', 'checkin', 'evening', 'study', 'ask'];
 const requestedView = new URLSearchParams(location.search).get('view');
 const startView = VIEWS.includes(requestedView) ? requestedView : 'now';
 
@@ -145,7 +146,7 @@ try {
     shell.replaceChildren(
       buildMasthead(map, focus),
       ...buildAppStates(),
-      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' || ui.view === 'intake' || ui.view === 'study' ? [] : buildEdgeTargets(ui.view)),
+      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' || ui.view === 'intake' || ui.view === 'study' || ui.view === 'ask' ? [] : buildEdgeTargets(ui.view)),
       surfaceFor(ui.view),
       ...(ui.paletteOpen ? [buildPalette(map)] : [])
     );
@@ -179,7 +180,7 @@ try {
       title.textContent = 'A place to start';
       const copy = document.createElement('p');
       copy.className = 'state-copy';
-      copy.textContent = 'Now offers one thing to start. Plan shapes today. Map holds the semester. Use Import progress below to bring your saved work here.';
+      copy.textContent = 'Now offers one thing to start. Plan shapes today. Map holds the semester. If you have saved progress, open Now to import it.';
       const button = document.createElement('button');
       button.className = 'act';
       button.textContent = 'Open my semester';
@@ -195,6 +196,7 @@ try {
     if (view === 'field') return renderField(map, ctx);
     if (view === 'intake') return renderIntake(map, ctx);
     if (view === 'study') return renderStudy(map, ctx, ui.studyExamId);
+    if (view === 'ask') return renderAssistant(map, ctx);
     if (view === 'map') return renderMap(map, ctx);
     if (view === 'checkin') return renderCheckin(map, ctx);
     if (view === 'evening') return renderEvening(map, ctx);
@@ -290,8 +292,12 @@ try {
     jump.className = 'palette-trigger'; jump.textContent = 'Jump';
     jump.setAttribute('aria-label', 'Jump to an item or surface');
     jump.addEventListener('click', () => { ui.paletteOpen = true; paint(); shell.querySelector('.palette-input')?.focus(); });
+    const ask = document.createElement('button');
+    ask.className = 'palette-trigger'; ask.textContent = 'Ask';
+    ask.setAttribute('aria-label', 'Ask Starlight about your semester');
+    ask.addEventListener('click', () => setView('ask'));
 
-    right.append(status, checkin, toggle, appearance, jump);
+    right.append(status, checkin, toggle, appearance, jump, ask);
     head.append(left, right);
     return head;
   }
@@ -305,7 +311,7 @@ try {
     input.type = 'search'; input.placeholder = 'Find an item or surface';
     const results = document.createElement('div'); results.className = 'palette-results';
     const entries = [
-      ...[['now', 'Now'], ['plan', 'Plan'], ['field', 'Interviews'], ['map', 'Map'], ['intake', 'Materials'], ['checkin', 'Check in'], ['evening', 'Evening']].map(([id, label]) => ({ label, sub: 'Surface', run: () => setView(id) })),
+      ...[['now', 'Now'], ['plan', 'Plan'], ['field', 'Interviews'], ['map', 'Map'], ['intake', 'Materials'], ['ask', 'Ask Starlight'], ['checkin', 'Check in'], ['evening', 'Evening']].map(([id, label]) => ({ label, sub: 'Surface', run: () => setView(id) })),
       ...map.allItems.map((item) => ({ label: item.title, sub: map.courseById.get(item.courseId)?.code || '', run: () => { ui.paletteOpen = false; ctx.openDetail(item, null, { silent: true }); } }))
     ];
     function show() {

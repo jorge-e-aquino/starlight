@@ -42,5 +42,8 @@ const confirmed = { items: { [exam.id]: { dateTrust: { status: 'verified', date:
 assert.equal(candidatesForDay(schema, confirmed, '2026-10-02').some((c) => c.kind === 'exam-morning' && c.itemId === exam.id), true);
 confirmed.items[exam.id].dateTrust.status = 'unverified';
 assert.equal(candidatesForDay(schema, confirmed, '2026-10-02').some((c) => c.kind === 'exam-morning' && c.itemId === exam.id), false);
+confirmed.items['econ-honorlock'] = { doneAt: 1 };
+assert.equal(candidatesForDay(schema, confirmed, '2026-10-01').some((c) => c.itemId === exam.id && c.action.includes('unchecked')), true);
+assert.equal(candidatesForDay(schema, confirmed, '2026-09-30').some((c) => c.itemId === exam.id && c.id.startsWith('notice:')), false);
 
 console.log('Push privacy and scheduling checks passed.');

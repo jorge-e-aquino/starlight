@@ -23,6 +23,7 @@ import * as store from './state.js';
 import { documentRows } from './document-ui.js';
 import { effectiveCourse } from './course-facts.js';
 import { buildExamSection } from './exam-ui.js';
+import { draftForItem } from './assistant-ui.js';
 
 const TYPE_LABEL = {
   regular: 'Coursework',
@@ -84,6 +85,7 @@ export function createDetailPanel(ctx) {
 
   let lastFocused = null;
   let openItem = null;
+  const writingOpen = new Set();
 
   function hide() {
     panel.classList.remove('open');
@@ -148,6 +150,14 @@ export function createDetailPanel(ctx) {
 
     if (item.type !== 'standing' && !['absorbed', 'cant-submit'].includes(state.resolution?.state)) {
       body.append(buildStepBox(item));
+      if (!['exam', 'final'].includes(item.type)) {
+        const writing = collapsible('Writing help', buildWritingHelp(item));
+        writing.open = writingOpen.has(item.id);
+        writing.addEventListener('toggle', () => { if (!writing.isConnected) return;
+          if (writing.open) writingOpen.add(item.id); else writingOpen.delete(item.id);
+        });
+        body.append(writing);
+      }
     }
 
     if (item.type !== 'standing') {
@@ -251,6 +261,64 @@ export function createDetailPanel(ctx) {
       catch (problem) { error.textContent = problem.message; error.hidden = false; }
     });
     wrap.append(form);
+    return wrap;
+  }
+
+  function buildWritingHelp(item) {
+    const state = store.itemState(item.id);
+    const wrap = el('div', 'writing-help');
+    wrap.append(el('p', 'fine', 'A starting draft stays here. Review the assignment and write the final version yourself.'));
+    const limitForm = el('form', 'writing-limit');
+    const size = el('input', 'truth-input'); size.type = 'number'; size.min = '1'; size.max = '30000'; size.placeholder = 'Hard limit';
+    size.value = state.writingLimit?.value || ''; size.setAttribute('aria-label', 'Hard writing limit');
+    const unit = el('select', 'truth-input'); unit.setAttribute('aria-label', 'Limit unit');
+    [['words', 'Words'], ['characters', 'Characters']].forEach(([value, label]) => unit.append(new Option(label, value)));
+    unit.value = state.writingLimit?.unit || 'words';
+    const set = el('button', 'act ghost small', 'Set limit'); set.type = 'submit';
+    limitForm.append(size, unit, set);
+    if (state.writingLimit) {
+      const clear = el('button', 'linky', 'Clear limit'); clear.type = 'button';
+      clear.addEventListener('click', () => ctx.act(() => store.setWritingLimit(item.id, null)));
+      limitForm.append(clear);
+    }
+    limitForm.addEventListener('submit', (event) => { event.preventDefault();
+      try { ctx.act(() => store.setWritingLimit(item.id, { value: size.value, unit: unit.value })); }
+      catch (error) { message.textContent = error.message; }
+    });
+    const draft = el('textarea', 'truth-input'); draft.rows = 7; draft.value = state.draftText || '';
+    draft.setAttribute('aria-label', `Draft for ${item.title}`);
+    const count = el('p', 'fine');
+    const updateCount = () => {
+      const limit = store.itemState(item.id).writingLimit;
+      const amount = limit?.unit === 'characters' ? draft.value.length : draft.value.trim().split(/\s+/).filter(Boolean).length;
+      count.textContent = limit ? `${amount} / ${limit.value} ${limit.unit}${amount > limit.value ? ' · over limit' : ''}` : 'No hard limit recorded.';
+    };
+    draft.addEventListener('input', updateCount); updateCount();
+    const actions = el('div', 'writing-actions');
+    const save = el('button', 'act small', 'Save draft');
+    save.addEventListener('click', () => { try { ctx.act(() => store.saveItemDraft(item.id, draft.value)); } catch (error) { message.textContent = error.message; } });
+    const generate = el('button', 'act ghost small', 'Help me start');
+    generate.addEventListener('click', async () => {
+      generate.disabled = true; message.textContent = 'Finding a starting point…';
+      try { const result = await draftForItem(item, ctx.map, store.itemState(item.id).writingLimit);
+        draft.value = result.text; updateCount();
+        ctx.act(() => store.saveItemDraft(item.id, draft.value, result.citations));
+      } catch (error) { message.textContent = error.message; generate.disabled = false; }
+    });
+    actions.append(save, generate);
+    const message = el('p', 'fine'); message.setAttribute('role', 'status');
+    wrap.append(limitForm, draft, count, actions, message);
+    if (state.draftSources?.length) wrap.append(el('p', 'fine', `Sources: ${state.draftSources.map((source) => source.title).join(' · ')}`));
+    const history = state.draftHistory || [];
+    if (history.length) {
+      const previous = el('details', 'draft-history'); previous.append(el('summary', null, 'Earlier drafts'));
+      history.slice().reverse().forEach((entry) => {
+        const restore = el('button', 'act ghost small', `Restore ${new Date(entry.at).toLocaleString()}`);
+        restore.addEventListener('click', () => ctx.act(() => store.saveItemDraft(item.id, entry.text, entry.sources || [])));
+        previous.append(restore);
+      });
+      wrap.append(previous);
+    }
     return wrap;
   }
 

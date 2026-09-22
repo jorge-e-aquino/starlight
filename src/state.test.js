@@ -208,6 +208,20 @@ function keepsBackup(actual, expected) {
   check('card review history keeps a bounded recent log', state.itemState('sample-exam').cardReviews.length === 80);
 }
 
+{
+  const { state } = await boot();
+  state.saveContextNote('past-chat', { title: 'Earlier discussion', text: 'The question arose in lecture.' });
+  check('imported context is a stamped, source-labeled decision', state.snapshot().notes['past-chat'].source === 'Imported context' && Number.isFinite(state.snapshot().notes['past-chat']._t.text));
+  state.removeContextNote('past-chat');
+  check('context removal is a stamped tombstone', Number.isFinite(state.snapshot().notes['past-chat'].deletedAt));
+  state.setWritingLimit('sample', { unit: 'words', value: 100 });
+  state.saveItemDraft('sample', 'First draft'); state.saveItemDraft('sample', 'Second draft');
+  check('item writing limit and draft are decisions', state.itemState('sample').writingLimit.value === 100 && state.itemState('sample').draftText === 'Second draft' && Number.isFinite(state.itemState('sample')._t.draftText));
+  check('previous draft survives in a capped log', state.itemState('sample').draftHistory[0].text === 'First draft');
+  state.setWritingLimit('sample', null);
+  check('clearing a revised hard limit stays a stamped decision', state.itemState('sample').writingLimit === null && Number.isFinite(state.itemState('sample')._t.writingLimit));
+}
+
 if (process.env.STARLIGHT_BACKUP) {
   try {
     const text = await readFile(process.env.STARLIGHT_BACKUP, 'utf8');

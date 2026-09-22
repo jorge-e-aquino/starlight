@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import webpush from 'web-push';
 import schema from '../course_map_schema_v2.json' with { type: 'json' };
 import { dateTrust } from '../src/truth.js';
-import { morningCandidate, examMorningCandidate, selectNotifications } from '../src/notification.js';
+import { morningCandidate, examMorningCandidate, noticingCandidate, selectNotifications } from '../src/notification.js';
 
 const zone = 'America/New_York';
 const dayKey = (now) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -22,12 +22,13 @@ export function candidatesForDay(semester, overlay, day) {
       if (exam) candidates.push(exam);
     }
     if (d < 0 || d > 3 || item.type === 'standing') continue;
+    if (trust.status !== 'verified' && d !== 1) continue;
     const gated = (semester.courses || []).some((c) => (c.items || []).some((gate) =>
       (gate.blocks || []).some((edge) => (typeof edge === 'string' ? edge : edge.itemId) === item.id) &&
       !overlay.items?.[gate.id]?.doneAt && gate.status !== 'done'
     ));
     if (gated) continue;
-    const candidate = morningCandidate(named, day);
+    const candidate = trust.status === 'verified' ? morningCandidate(named, day) : noticingCandidate(named, trust, day);
     if (!candidate) continue;
     candidate.priority = (d === 0 ? 10 : 4 - d) + (item.type === 'exam' || item.type === 'final' ? 3 : 0) + (item.points || 0) / 1000;
     candidates.push(candidate);

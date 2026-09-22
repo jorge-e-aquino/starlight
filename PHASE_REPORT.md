@@ -355,3 +355,50 @@ phone layouts were looked at; the phone has no horizontal overflow. Missing
 topics, no matching source, material loading and failed/offline reads have
 explicit states, with a retry for failures; the shared app shell retains its
 first-run and storage error surfaces.
+
+## Phase 10: Grounded intelligence
+
+Ask is one small entry in the masthead. It ranks the relevant semester item,
+confirmed fact, imported note, or passage in a saved material, then shows a
+source beside its short answer. An exact item title outranks generic course
+material; a question about a disputed exam date answers with the dispute and
+opens that item's source controls. Unverified dates are never asserted as
+certain. Posted scores and policy-based losses enter the item evidence only
+when recorded. Behavioral open traces are excluded from context unless the question
+explicitly asks about avoidance. Local source-backed answers work without a
+paid key and while offline. File reads show loading and a partial-source
+warning when some materials cannot open.
+
+An optional OpenAI API connection uses a per-device key stored apart from the
+progress overlay, following the existing sync-token pattern. The same-origin
+relay forwards selected excerpts and the key for one request, sets
+`store: false`, and neither stores the key nor bundles it. The model must cite
+an evidence marker; an invalid citation or an unverified date claim falls
+back to the local answer. The model path is implemented and mocked in tests,
+but no real key was supplied, so a live model response remains unverified.
+The current inexpensive model is GPT-5.6 Luna; no usage occurs without a key.
+
+Materials has a one-time text/Markdown/JSON context import behind course
+details. It becomes a removable note, not a verified date or course fact.
+Item detail hides Writing help until opened. It holds a revisable hard word or
+character limit, a modest local outline or sourced model draft, and earlier
+versions. Pass/fail work asks for requirements and stops at passing. A
+one-day-before observation about an unverified or contradicted listed date
+uses the existing ordinary notification lane and hard daily budget; it never
+claims that the listed date is certain. It does not repeat on other days.
+
+New overlay fields: `notes` records, `items.<id>.writingLimit`,
+`items.<id>.draftText`, and `items.<id>.draftSources` are stamped decisions;
+removing context or revising a limit/draft must replace older claims across
+devices. `items.<id>.draftHistory` is a capped union log (12) so revisions from
+either device remain recoverable. Key and conversation are device-local and
+never exported. No schema date was marked verified.
+
+Checks: full tests and production build pass. The actual September 21 backup
+loaded through the importer, exported without lost fields, and reloaded. I
+asked about the MGT 2250 Test 1 conflict and the ECON Honorlock gate in the
+running app, opened the writing helper, recorded a hard limit, and generated a
+local outline. The assistant was viewed at desktop and 390 px phone width;
+neither layout overflows. Empty, loading, error, offline and first-run paths
+are handled by the assistant and shared app states. The live model and private
+file sync still require a device key to verify end to end.

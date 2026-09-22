@@ -40,6 +40,17 @@ export function morningCandidate(item, dayKey) {
   };
 }
 
+// A periodic observation spends an ordinary notification slot. It never
+// asserts that the unverified listed date is the actual deadline.
+export function noticingCandidate(item, trust, dayKey) {
+  if (!item?.id || !item.courseCode || !item.title || !dayKey || trust?.status === 'verified') return null;
+  return {
+    id: `notice:date:${item.id}:${dayKey}`, itemId: item.id, kind: 'regular', priority: 5,
+    title: `${item.courseCode} · ${item.title}`,
+    action: trust?.status === 'contradicted' ? 'Sources disagree on its date. Check the course source.' : 'Its listed date is unchecked. Confirm it from the course source.'
+  };
+}
+
 /** A dossier must support every concrete claim in an exam-morning alert. */
 export function examMorningCandidate(item, dossier, trust, dayKey) {
   if (!item || !dossier || trust?.status !== 'verified' || !trust.source || trust.date !== dayKey) return null;

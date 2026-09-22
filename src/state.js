@@ -175,6 +175,28 @@ export function setSheetCandidate(topicId, value) {
   patchFieldRecord('topics', topicId, { sheetCandidate: Boolean(value) });
 }
 
+export function saveContextNote(id, value) {
+  if (!id || !value?.title?.trim() || !value?.text?.trim() || value.text.length > 60000) throw new Error('Give this note a title and up to 60,000 characters.');
+  patchFieldRecord('notes', id, { title: value.title.trim().slice(0, 160), text: value.text.trim(), source: value.source || 'Imported context', deletedAt: null });
+}
+
+export function removeContextNote(id) { patchFieldRecord('notes', id, { deletedAt: Date.now() }); }
+
+export function setWritingLimit(id, limit) {
+  if (id && limit === null) { patch(id, { writingLimit: null }); return; }
+  if (!id || !['words', 'characters'].includes(limit?.unit) || !Number.isInteger(Number(limit.value)) || Number(limit.value) < 1 || Number(limit.value) > 30000) throw new Error('Choose a word or character limit.');
+  patch(id, { writingLimit: { unit: limit.unit, value: Number(limit.value) } });
+}
+
+export function saveItemDraft(id, text, sources = itemState(id).draftSources || []) {
+  if (!id || typeof text !== 'string' || text.length > 60000) throw new Error('Keep the draft under 60,000 characters.');
+  const old = itemState(id).draftText || '';
+  if (old === text) return;
+  const previous = itemState(id).draftHistory || [];
+  patch(id, { draftText: text, draftSources: sources.slice(0, 8).map(({ id: sourceId, title }) => ({ id: sourceId, title })),
+    draftHistory: old ? [...previous, { id: crypto.randomUUID(), text: old, sources: itemState(id).draftSources || [], at: Date.now() }].slice(-12) : previous });
+}
+
 export function setExamDossier(id, fields) {
   if (!id || !fields || typeof fields !== 'object') throw new Error('Choose an exam.');
   if (fields.startTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(fields.startTime)) throw new Error('Enter a valid start time.');

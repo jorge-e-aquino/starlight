@@ -92,6 +92,16 @@ const item = (fields, t) => ({ ...fields, _t: t });
   check('prior sheet drafts union as a capped log', merged.sheetDrafts.length === 2 && merged.sheetDrafts[0].id === 'a' && merged.sheetDrafts[1].id === 'b');
 }
 
+{
+  const a = { items: { work: item({ draftText: 'first', draftHistory: [{ id: 'a', text: 'older', at: 1 }] }, { draftText: 2 }) },
+    notes: { context: item({ text: 'old' }, { text: 1 }) } };
+  const b = { items: { work: item({ draftText: 'second', draftHistory: [{ id: 'b', text: 'first', at: 3 }] }, { draftText: 4 }) },
+    notes: { context: item({ text: 'revised' }, { text: 5 }) } };
+  const merged = mergeState(a, b);
+  check('later writing and imported context decisions win', merged.items.work.draftText === 'second' && merged.notes.context.text === 'revised');
+  check('earlier drafts union across devices', merged.items.work.draftHistory.length === 2);
+}
+
 // --- device-local fields never cross ---
 {
   const local = { timer: { endsAt: 5 }, sound: false, items: {} };
