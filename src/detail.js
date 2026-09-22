@@ -24,6 +24,7 @@ import { documentRows } from './document-ui.js';
 import { effectiveCourse } from './course-facts.js';
 import { buildExamSection } from './exam-ui.js';
 import { draftForItem } from './assistant-ui.js';
+import { dateTrust } from './truth.js';
 
 const TYPE_LABEL = {
   regular: 'Coursework',
@@ -144,11 +145,18 @@ export function createDetailPanel(ctx) {
     if (!item.confirmed) tags.append(el('span', 'tag dashed', 'Not confirmed'));
     body.append(tags);
 
-    // Actions come before reference material: this panel exists to help start
-    // the thing, not to describe it.
-    body.append(buildActions(item));
+    // Exam rules are the first action context. Coursework keeps its direct verbs.
+    const dateDetails = item.type === 'standing' ? null : collapsible('Date and sources',
+      ['exam', 'final'].includes(item.type) ? buildExamDateSources(item) : buildDateTrustForm(item, ctx));
+    const exam = buildExamSection(item, {
+      ...ctx,
+      openDate: () => { dateDetails.open = true; dateDetails.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    });
+    if (exam) body.append(exam);
+    if (exam) body.append(collapsible('Update exam status', buildActions(item)));
+    else body.append(buildActions(item));
 
-    if (item.type !== 'standing' && !['absorbed', 'cant-submit'].includes(state.resolution?.state)) {
+    if (!exam && item.type !== 'standing' && !['absorbed', 'cant-submit'].includes(state.resolution?.state)) {
       body.append(buildStepBox(item));
       if (!['exam', 'final'].includes(item.type)) {
         const writing = collapsible('Writing help', buildWritingHelp(item));
@@ -161,9 +169,7 @@ export function createDetailPanel(ctx) {
     }
 
     if (item.type !== 'standing') {
-      body.append(collapsible('Date and sources', buildDateTrustForm(item, ctx)));
-      const exam = buildExamSection(item, ctx);
-      if (exam) body.append(exam);
+      body.append(dateDetails);
       body.append(collapsible('Outcome', buildResolutionForm(item, course, ctx)));
       body.append(collapsible('External block', buildExternalBlockForm(item, ctx)));
       const links = buildLinks(item, course);
@@ -174,7 +180,7 @@ export function createDetailPanel(ctx) {
     const attached = Object.entries(store.snapshot().documents || {}).filter(([, record]) => !record.deletedAt && (record.itemIds || []).includes(item.id));
     if (attached.length) body.append(collapsible('Documents', documentRows(attached, ctx)));
 
-    const scoreForm = buildScoreForm(item, course, ctx);
+    const scoreForm = !exam || state.doneAt || state.score != null ? buildScoreForm(item, course, ctx) : null;
     if (scoreForm) body.append(scoreForm);
 
     const ring = avoidance(item);
@@ -207,8 +213,8 @@ export function createDetailPanel(ctx) {
       }
     }
 
-    body.append(buildEffortPicker(item, band));
-    if (item.dateObj) body.append(buildDueTime(item));
+    if (!exam) body.append(buildEffortPicker(item, band));
+    if (item.dateObj && !exam) body.append(buildDueTime(item));
 
     const dl = document.createElement('dl');
     if (item.dateObj) {
@@ -240,6 +246,21 @@ export function createDetailPanel(ctx) {
       });
       body.append(block('Steps from the syllabus', list));
     }
+  }
+
+  function buildExamDateSources(item) {
+    const trust = dateTrust(item, store.snapshot());
+    const wrap = el('div', 'exam-date-sources');
+    if (trust.sources.length) {
+      trust.sources.forEach((source) => {
+        const line = el('p', 'exam-date-source');
+        line.append(el('strong', null, source.source || 'Source'), document.createTextNode(` · ${source.date || 'date unknown'}${source.time ? ` · ${source.time}` : ' · time unknown'}`));
+        if (source.note) line.append(el('span', 'fine', source.note));
+        wrap.append(line);
+      });
+    } else wrap.append(el('p', 'fine', trust.source ? `Recorded source: ${trust.source}` : 'No date source recorded yet.'));
+    wrap.append(collapsible('Correct date and time', buildDateTrustForm(item, ctx)));
+    return wrap;
   }
 
   function buildLabels(item) {

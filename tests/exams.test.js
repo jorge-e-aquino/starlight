@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { isExam, missingDossier, prepLadder, upcomingPrep, priorExamDebrief } from '../src/exams.js';
+import { isExam, missingDossier, examBrief, prepLadder, upcomingPrep, priorExamDebrief } from '../src/exams.js';
 
 const test = { id: 'mgt2250-test1', courseId: 'mgt2250', courseCode: 'MGT 2250', type: 'exam', title: 'Test 1', dateObj: new Date(2026, 8, 24, 12) };
 const project = { ...test, type: 'final', title: 'Final Consulting Project' };
@@ -7,6 +7,17 @@ assert.ok(isExam(test));
 assert.equal(isExam(project), false);
 assert.ok(missingDossier({}).includes('Start time'));
 assert.ok(missingDossier({ cheatSheetRule: 'allowed' }).includes('Cheat sheet dimensions and pages'));
+const conflicted = { ...test, date: '2026-09-24', dateEvidence: { status: 'contradicted', sources: [] } };
+const unresolvedBrief = examBrief(conflicted, { startTime: '17:00', location: 'MyLab' });
+assert.match(unresolvedBrief[0].value, /recorded start/);
+assert.match(unresolvedBrief[0].value, /close time needs checking/);
+assert.equal(unresolvedBrief[0].unknown, true);
+assert.match(unresolvedBrief[1].value, /Rule needs checking/);
+const verifiedBrief = examBrief(test, { startTime: '17:00', location: 'MyLab', cheatSheetRule: 'none', materials: 'ID', source: 'Canvas Test 1' }, {
+  items: { [test.id]: { dateTrust: { status: 'verified', date: '2026-09-24', time: '18:10', source: 'Canvas Test 1' } } }
+});
+assert.match(verifiedBrief[0].value, /^17:00 recorded start · closes 18:10/);
+assert.equal(verifiedBrief[0].unknown, false);
 
 let steps = prepLadder(test, { items: {}, topics: {} });
 assert.equal(steps.find((step) => step.key === 'rules').date, '2026-09-14');

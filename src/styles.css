@@ -3074,6 +3074,22 @@ button { font: inherit; color: inherit; }
 .exam-prep, .prep-notice { margin-top: var(--space-16); border: var(--space-1) solid var(--rule); border-radius: var(--space-12); background: var(--surface-panel); padding: var(--space-14); }
 .exam-prep > summary, .prep-notice > summary, .exam-sheet > summary { cursor: pointer; color: var(--ink); font-weight: var(--weight-650); }
 .exam-prep > .fine { display: block; margin: var(--space-8) 0 var(--space-16); }
+.exam-prep > .focus-eyebrow { margin: 0 0 var(--space-12); }
+.exam-brief-weight { margin: 0 0 var(--space-12); color: var(--ink-soft); font-size: var(--text-small); }
+.exam-brief { display: grid; gap: var(--space-8); }
+.exam-brief-fact { display: grid; gap: var(--space-4); padding: var(--space-12); border-radius: var(--space-8); background: var(--surface-hover); }
+.exam-brief-fact[data-unknown="true"] { border-left: var(--space-3) solid var(--state-conflict-ink); }
+.exam-brief-label { color: var(--ink-soft); font-size: var(--text-small); }
+.exam-brief-fact strong { color: var(--ink); font-size: var(--text-body-small); line-height: var(--leading-1-5); font-weight: var(--weight-600); }
+.exam-brief-source, .exam-brief-missing { color: var(--ink-soft); font-size: var(--text-small); margin: var(--space-8) 0 0; overflow-wrap: anywhere; }
+.exam-primary { margin-top: var(--space-16); }
+.exam-primary { min-height: var(--target-touch); }
+.exam-correction { margin-top: var(--space-16); padding-top: var(--space-12); border-top: var(--space-1) solid var(--rule); }
+.exam-correction > summary, .exam-ladder > summary, .exam-topics > summary { cursor: pointer; color: var(--ink); font-weight: var(--weight-650); }
+.exam-correction .exam-dossier-form { margin-top: var(--space-12); }
+.exam-date-sources { display: grid; gap: var(--space-8); }
+.exam-date-source { margin: 0; padding: var(--space-10); border-left: var(--space-3) solid var(--state-conflict-ink); color: var(--ink); font-size: var(--text-small); }
+.exam-date-source .fine { display: block; margin-top: var(--space-4); }
 .exam-dossier-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12); }
 .exam-dossier-form h3, .exam-dossier-form .act, .exam-dossier-form .exam-field:has(textarea) { grid-column: 1 / -1; }
 .exam-dossier-form h3, .exam-ladder h3, .exam-topics h3 { margin: var(--space-16) 0 var(--space-4); font-size: var(--text-heading); }

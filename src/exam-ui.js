@@ -1,5 +1,6 @@
 import * as store from './state.js';
-import { isExam, missingDossier, prepLadder, upcomingPrep, prepLabel, priorExamDebrief } from './exams.js';
+import { isExam, examBrief, prepLadder, upcomingPrep, prepLabel, priorExamDebrief } from './exams.js';
+import { dateTrust } from './truth.js';
 
 function el(tag, className, value) {
   const node = document.createElement(tag);
@@ -8,7 +9,20 @@ function el(tag, className, value) {
   return node;
 }
 
-const openExams = new Set();
+function briefFact(label, value, unknown = false) {
+  const fact = el('div', 'exam-brief-fact');
+  fact.dataset.unknown = String(unknown);
+  fact.append(el('span', 'exam-brief-label', label), el('strong', null, value));
+  return fact;
+}
+
+function buildBrief(item, dossier, overlay) {
+  const brief = el('div', 'exam-brief');
+  examBrief(item, dossier, overlay).forEach(({ label, value, unknown }) => brief.append(briefFact(label, value, unknown)));
+  brief.append(el('p', 'exam-brief-source', dossier.source ? `Source recorded: ${dossier.source}` : 'No exam-rule source recorded yet.'));
+  return brief;
+}
+
 function field(label, key, value, type = 'text') {
   const wrap = el('label', 'exam-field');
   wrap.append(el('span', null, label));
@@ -31,12 +45,13 @@ function selectField(label, key, value, options) {
 export function buildExamSection(item, ctx) {
   if (!isExam(item)) return null;
   const dossier = store.itemState(item.id).examDossier || {};
-  const section = el('details', 'exam-prep'); section.open = openExams.has(item.id);
-  section.addEventListener('toggle', () => { if (section.open) openExams.add(item.id); else openExams.delete(item.id); });
-  const missing = missingDossier(dossier);
+  const section = el('section', 'exam-prep');
   const inherited = priorExamDebrief(item, ctx.map.allItems, store.snapshot());
-  section.append(el('summary', null, `Exam preparation · ${missing.length ? 'details to check' : 'details recorded'}`));
-  section.append(el('p', 'fine', missing.length ? `${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ' and more' : ''} need a source.` : 'Rules recorded. The exam date has its own source state.'));
+  const course = ctx.map.courseById.get(item.courseId);
+  const percent = item.points != null && course?.totalPoints ? ` · ${(item.points / course.totalPoints * 100).toFixed(1)}% of ${item.courseCode}` : '';
+  section.append(el('p', 'focus-eyebrow', 'Exam brief'));
+  if (item.points != null) section.append(el('p', 'exam-brief-weight', `${item.points} points${percent}`));
+  section.append(buildBrief(item, dossier, store.snapshot()));
   if (inherited) {
     const prior = el('details', 'exam-prior');
     prior.append(el('summary', null, `From ${inherited.title} · what happened`));
@@ -67,10 +82,11 @@ export function buildExamSection(item, ctx) {
     for (const key of ['durationMinutes', 'questionCount', 'sheetWidth', 'sheetHeight', 'sheetPages']) values[key] = values[key] ? Number(values[key]) : null;
     ctx.act(() => store.setExamDossier(item.id, values));
   });
-  section.append(form);
+  const correction = el('details', 'exam-correction');
+  correction.append(el('summary', null, 'Correct exam details'), form);
 
   const steps = prepLadder(item, store.snapshot());
-  const ladder = el('div', 'exam-ladder'); ladder.append(el('h3', null, 'Preparation steps'));
+  const ladder = el('details', 'exam-ladder'); ladder.append(el('summary', null, 'Preparation steps'));
   if (!item.dateObj) ladder.append(el('p', 'fine', 'Add a date and source to place preparation steps on the calendar.'));
   else if (!steps.length) ladder.append(el('p', 'fine', 'The applicable steps are complete or the exam is taken.'));
   else steps.forEach((step) => {
@@ -82,10 +98,18 @@ export function buildExamSection(item, ctx) {
     button.addEventListener('click', () => ctx.act(() => done ? store.clearProgress(step.id) : store.markDone(step.id)));
     row.append(copy, button); ladder.append(row);
   });
-  section.append(ladder);
-
   const topics = Object.entries(store.snapshot().topics || {}).filter(([, topic]) => !topic.deletedAt && (topic.examIds || []).includes(item.id));
-  const coverage = el('div', 'exam-topics'); coverage.append(el('h3', null, 'Topic coverage'));
+  const timeTrust = dateTrust(item, store.snapshot());
+  const needsTime = timeTrust.status !== 'verified' || !timeTrust.time || !dossier.startTime;
+  const primary = el('button', 'act primary exam-primary', needsTime ? 'Check exam time' : topics.length ? 'Study these topics' : 'See preparation steps');
+  primary.addEventListener('click', () => {
+    if (needsTime) ctx.openDate();
+    else if (topics.length) ctx.openStudy(item);
+    else { ladder.open = true; ladder.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  });
+  section.append(primary, ladder, correction);
+
+  const coverage = el('details', 'exam-topics'); coverage.append(el('summary', null, 'Topic coverage'));
   if (!topics.length) coverage.append(el('p', 'fine', 'Add topics from a lecture in Materials, then link them to this exam.'));
   topics.forEach(([id, topic]) => {
     const row = el('label', 'exam-topic'); row.append(el('span', null, topic.title));
@@ -96,11 +120,6 @@ export function buildExamSection(item, ctx) {
     row.append(select); coverage.append(row);
   });
   section.append(coverage);
-  if (topics.length) {
-    const study = el('button', 'act small', 'Study these topics');
-    study.addEventListener('click', () => ctx.openStudy(item));
-    section.append(study);
-  }
   if (dossier.cheatSheetRule === 'allowed' && dossier.sheetWidth && dossier.sheetHeight && dossier.sheetPages) section.append(buildSheet(item, dossier, ctx));
   if (store.itemState(item.id).doneAt) {
     const after = field('What you learned afterward', 'learnedAfter', dossier.learnedAfter, 'textarea');
@@ -202,7 +221,7 @@ export function buildPrepNotice(map, ctx, limit = 1) {
     row.append(el('strong', null, step.title), el('span', 'fine', prepLabel(step)));
     if (step.weakTopics.length) row.append(el('span', 'fine', step.weakTopics.join(' · ')));
     const action = el('button', 'act ghost small', 'Open exam');
-    action.addEventListener('click', () => { openExams.add(step.examId); ctx.openDetail(exams.find((exam) => exam.id === step.examId), action, { silent: true }); });
+    action.addEventListener('click', () => { ctx.openDetail(exams.find((exam) => exam.id === step.examId), action, { silent: true }); });
     const done = el('button', 'act ghost small', 'Done');
     done.addEventListener('click', () => ctx.act(() => store.markDone(step.id)));
     row.append(action, done); section.append(row);

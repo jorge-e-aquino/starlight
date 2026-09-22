@@ -24,6 +24,24 @@ export function missingDossier(dossier = {}) {
   return missing;
 }
 
+export function examBrief(exam, dossier = {}, overlay = {}) {
+  const trust = dateTrust(exam, overlay);
+  const start = dossier.startTime ? `${dossier.startTime} recorded start` : 'Start time needs checking';
+  const close = trust.status === 'verified' && trust.time ? `closes ${trust.time}` : 'close time needs checking';
+  const sheet = dossier.cheatSheetRule === 'allowed'
+    ? dossier.sheetWidth && dossier.sheetHeight && dossier.sheetPages
+      ? `Allowed · ${dossier.sheetPages} page${dossier.sheetPages === 1 ? '' : 's'}, ${dossier.sheetWidth} × ${dossier.sheetHeight} in`
+      : 'Allowed · size needs checking'
+    : dossier.cheatSheetRule === 'none' ? 'Not allowed' : 'Rule needs checking';
+  return [
+    { label: 'When and where', value: `${start} · ${close} · ${dossier.location || 'testing place unknown'}`,
+      unknown: !dossier.startTime || !dossier.source || !trust.time || !dossier.location || trust.status !== 'verified' },
+    { label: 'Rules and materials', value: `${sheet} · ${dossier.materials || 'materials unknown'}`,
+      unknown: !dossier.cheatSheetRule || !dossier.materials },
+    { label: 'Ready for', value: dossier.topicsCovered || 'Topics need checking', unknown: !dossier.topicsCovered }
+  ];
+}
+
 function dayMinus(date, amount) {
   const result = new Date(date);
   result.setDate(result.getDate() - amount);
