@@ -6,6 +6,7 @@ import { extractFile } from './file-extract.js';
 import { POMODORO } from './schedule.js';
 import { primeAudio } from './chime.js';
 import { setTimerContext } from './plan.js';
+import { samplePracticeFor } from './sample-practice.js';
 
 function el(tag, className, value) {
   const node = document.createElement(tag);
@@ -22,8 +23,9 @@ function topicsFor(examId) {
 }
 
 function studySession(examId, topics) {
-  if (!session || session.examId !== examId) session = { examId, mode: 'cards', index: 0, revealed: false, finished: false,
-    orderIds: topicOrder(topics, store.itemState(examId).cardReviews || []).map((topic) => topic.id), practiceIndex: 0, practiceRevealed: false };
+  if (!session || session.examId !== examId) session = { examId, mode: samplePracticeFor(examId) ? 'sample' : 'cards', index: 0, revealed: false, finished: false,
+    orderIds: topicOrder(topics, store.itemState(examId).cardReviews || []).map((topic) => topic.id), practiceIndex: 0, practiceRevealed: false,
+    sampleQueue: samplePracticeFor(examId)?.questions.map((_, index) => index) || [], sampleIndex: 0, sampleRetry: [], sampleRevealed: false };
   return session;
 }
 
@@ -106,16 +108,17 @@ export function renderStudy(map, ctx, examId) {
   beginMaterials(exam, ctx);
   const topics = topicsFor(exam.id);
   const state = studySession(exam.id, topics);
+  const sample = samplePracticeFor(exam.id);
   const back = el('button', 'act ghost small', `Back to ${exam.courseCode} ${exam.title}`);
   back.addEventListener('click', () => ctx.closeStudy(exam));
   root.append(back, el('p', 'focus-eyebrow', 'Study'), el('h2', 'study-title', `${exam.courseCode} · ${exam.title}`));
-  if (!topics.length) {
+  if (!topics.length && !sample) {
     root.append(el('p', 'fine', 'No reviewed topics yet. Add lecture material in Materials, then link its topics to this exam.'));
     const materials = el('button', 'act small', 'Open Materials'); materials.addEventListener('click', ctx.openMaterials); root.append(materials);
     return root;
   }
   const modes = el('div', 'study-modes');
-  [['cards', 'Learning cards'], ['cram', 'Cram'], ['practice', 'Practice from materials']].forEach(([id, title]) => {
+  [...(sample ? [['sample', 'Sample questions']] : []), ...(topics.length ? [['cards', 'Learning cards'], ['cram', 'Cram'], ['practice', 'From materials']] : [])].forEach(([id, title]) => {
     const button = el('button', 'act ghost small', title);
     button.setAttribute('aria-pressed', String(state.mode === id));
     button.addEventListener('click', () => { state.mode = id; state.index = 0; state.finished = false; state.revealed = false;
@@ -123,9 +126,57 @@ export function renderStudy(map, ctx, examId) {
     modes.append(button);
   });
   root.append(modes);
-  if (state.mode === 'practice') root.append(practiceView(exam, topics, materialCache.get(exam.id), state, ctx));
+  if (state.mode === 'sample' && sample) root.append(sampleView(sample, state, ctx));
+  else if (state.mode === 'practice') root.append(practiceView(exam, topics, materialCache.get(exam.id), state, ctx));
   else root.append(cardView(exam, topics, state, ctx));
   return root;
+}
+
+function sampleView(pack, state, ctx) {
+  const wrap = el('section', 'study-card sample-card');
+  const source = el('a', 'study-sample-source', 'Open instructor’s sample set');
+  source.href = pack.document; source.target = '_blank'; source.rel = 'noopener';
+  if (navigator.onLine === false) {
+    source.setAttribute('aria-disabled', 'true');
+    source.removeAttribute('href');
+  }
+  if (state.sampleIndex >= state.sampleQueue.length) {
+    if (state.sampleRetry.length) {
+      wrap.append(el('h3', null, 'A second look'));
+      wrap.append(el('p', 'fine', `${state.sampleRetry.length} idea${state.sampleRetry.length === 1 ? '' : 's'} to revisit.`));
+      const retry = el('button', 'act primary', 'Review those ideas');
+      retry.addEventListener('click', () => { state.sampleQueue = state.sampleRetry; state.sampleRetry = []; state.sampleIndex = 0; state.sampleRevealed = false; ctx.repaint(); });
+      wrap.append(retry, source); return wrap;
+    }
+    wrap.append(el('h3', null, 'Practice pass complete'));
+    wrap.append(el('p', 'fine', 'These came from the instructor’s sample set. The exact exam coverage still needs checking.'));
+    const again = el('button', 'act ghost small', 'Start another pass');
+    again.addEventListener('click', () => { state.sampleQueue = pack.questions.map((_, index) => index); state.sampleIndex = 0; state.sampleRevealed = false; ctx.repaint(); });
+    wrap.append(again, source); return wrap;
+  }
+  const question = pack.questions[state.sampleQueue[state.sampleIndex]];
+  wrap.append(el('p', 'focus-eyebrow', `${state.sampleIndex + 1} / ${state.sampleQueue.length} · ${question.title}`));
+  wrap.append(el('h3', null, question.prompt));
+  if (!state.sampleRevealed) {
+    const reveal = el('button', 'act primary', 'Show explanation');
+    reveal.addEventListener('click', () => { state.sampleRevealed = true; ctx.repaint(); });
+    wrap.append(reveal);
+  } else {
+    wrap.append(el('p', 'study-source', question.answer));
+    const actions = el('div', 'study-rating');
+    [['Review again', true], ['Got it', false]].forEach(([label, repeat]) => {
+      const button = el('button', repeat ? 'act ghost small' : 'act primary', label);
+      button.addEventListener('click', () => {
+        if (repeat && !state.sampleRetry.includes(state.sampleQueue[state.sampleIndex])) state.sampleRetry.push(state.sampleQueue[state.sampleIndex]);
+        state.sampleIndex += 1; state.sampleRevealed = false; ctx.repaint();
+      });
+      actions.append(button);
+    });
+    wrap.append(actions);
+  }
+  wrap.append(el('p', 'fine', `Source: ${pack.title}, page ${question.page}. Practice material; exam coverage unconfirmed.`), source);
+  if (navigator.onLine === false) wrap.append(el('p', 'fine', 'The practice prompts work offline. Reconnect to open the original file in Canvas.'));
+  return wrap;
 }
 
 function cardView(exam, topics, sessionState, ctx) {

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { topicOrder, coverage, practiceQuestions } from '../src/study.js';
+import { samplePracticeFor } from '../src/sample-practice.js';
 
 const topics = [
   { id: 'inflation', title: 'Inflation', confidence: 2 },
@@ -17,4 +18,9 @@ assert.equal(questions[0].source, 'Lecture 4.pdf');
 assert.equal(questions[0].page, 2);
 assert.ok(questions[0].answer.includes('total market value'));
 assert.deepEqual(practiceQuestions({ id: 'other', title: 'Fiscal multiplier' }, materials), []);
+const sample = samplePracticeFor('mgt2250-test1');
+assert.equal(sample.questions.length, 6);
+assert.ok(sample.questions.every(({ prompt, answer, page }) => prompt && answer && page));
+assert.match(sample.document, /gatech\.instructure\.com\/courses\/531522\/files\/75751069/);
+assert.equal(samplePracticeFor('mgt2250-test2'), null);
 console.log('Topic review and source-grounded practice checks pass.');

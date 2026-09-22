@@ -1,6 +1,7 @@
 import * as store from './state.js';
 import { isExam, examBrief, prepLadder, upcomingPrep, prepLabel, priorExamDebrief } from './exams.js';
 import { dateTrust } from './truth.js';
+import { samplePracticeFor } from './sample-practice.js';
 
 function el(tag, className, value) {
   const node = document.createElement(tag);
@@ -99,11 +100,13 @@ export function buildExamSection(item, ctx) {
     row.append(copy, button); ladder.append(row);
   });
   const topics = Object.entries(store.snapshot().topics || {}).filter(([, topic]) => !topic.deletedAt && (topic.examIds || []).includes(item.id));
+  const sample = samplePracticeFor(item.id);
   const timeTrust = dateTrust(item, store.snapshot());
   const needsTime = timeTrust.status !== 'verified' || !timeTrust.time || !dossier.startTime;
-  const primary = el('button', 'act primary exam-primary', needsTime ? 'Check exam time' : topics.length ? 'Study these topics' : 'See preparation steps');
+  const primary = el('button', 'act primary exam-primary', sample ? 'Practice sample questions' : needsTime ? 'Check exam time' : topics.length ? 'Study these topics' : 'See preparation steps');
   primary.addEventListener('click', () => {
-    if (needsTime) ctx.openDate();
+    if (sample) ctx.openStudy(item);
+    else if (needsTime) ctx.openDate();
     else if (topics.length) ctx.openStudy(item);
     else { ladder.open = true; ladder.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   });
