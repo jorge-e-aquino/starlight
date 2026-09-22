@@ -26,6 +26,10 @@ function applyAppearance() {
   document.documentElement.dataset.scheme = preferences.scheme === 'system'
     ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     : preferences.scheme;
+  const tone = document.documentElement.dataset.scheme === 'dark'
+    ? { lavender: '#151927', paper: '#211b19', slate: '#141d23' }[preferences.ground]
+    : { lavender: '#f5f4fd', paper: '#f8f5ed', slate: '#eff2f6' }[preferences.ground];
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tone);
 }
 applyAppearance();
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyAppearance);
@@ -136,6 +140,9 @@ try {
 
   function paint() {
     const focus = pickFocus(map.allItems);
+    const sameView = ui.view === lastView;
+    const mapLeft = sameView && ui.view === 'map' ? shell.querySelector('.canvas')?.scrollLeft : null;
+    const pageTop = sameView ? window.scrollY : null;
     // Only Now actually offers this item as the thing to start. Visiting Plan,
     // Map, or the check-in must not manufacture an avoidance observation.
     if (focus && ui.view === 'now') store.recordFocusDay(focus.id);
@@ -154,7 +161,11 @@ try {
       const item = detail.openItem;
       detail.repaint(item, map.courseById.get(item.courseId), Boolean(focus && focus.id === item.id));
     }
-    if (ui.view === 'map') centerOn(focus);
+    if (ui.view === 'map') {
+      if (mapLeft != null) shell.querySelector('.canvas').scrollLeft = mapLeft;
+      else centerOnToday(focus);
+    }
+    if (pageTop != null) window.scrollTo(0, pageTop);
   }
 
   function buildAppStates() {
@@ -365,10 +376,9 @@ try {
     return target;
   }
 
-  function centerOn(item) {
-    if (!item) return;
+  function centerOnToday(item) {
     const canvas = shell.querySelector('.canvas');
-    const node = shell.querySelector(`[data-item-id="${item.id}"]`);
+    const node = shell.querySelector('.today-line') || (item && shell.querySelector(`[data-item-id="${item.id}"]`));
     if (canvas && node) canvas.scrollLeft = Math.max(0, node.offsetLeft - canvas.clientWidth / 2);
   }
 

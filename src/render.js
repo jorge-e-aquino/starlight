@@ -6,6 +6,7 @@ import { dateTrust } from './truth.js';
 import { dateText, resolutionLabel } from './truth-ui.js';
 import * as store from './state.js';
 import { buildScale, buildAxis, buildLanes, nodeRadius } from './layout.js';
+import { dueAt } from './schedule.js';
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -37,6 +38,42 @@ export function starSvg(size) {
 export function renderMap(map, ctx) {
   const now = today();
   const wrap = el('div', 'map-view');
+  const toolbar = el('div', 'map-toolbar');
+  const jump = el('button', 'map-today-button', 'Today');
+  jump.type = 'button';
+  jump.setAttribute('aria-label', 'Center the semester map on today');
+  toolbar.append(jump);
+  const todayItems = map.allItems
+    .filter((item) => item.type !== 'standing' && item.dateObj &&
+      !['done', 'resolved'].includes(phase(item, now)) &&
+      item.dateObj.getFullYear() === now.getFullYear() &&
+      item.dateObj.getMonth() === now.getMonth() &&
+      item.dateObj.getDate() === now.getDate())
+    .sort((a, b) => (dueAt(a)?.getTime() ?? Infinity) - (dueAt(b)?.getTime() ?? Infinity));
+  const day = el('details', 'map-day-list');
+  day.append(el('summary', null, todayItems.length ? `Due today · ${todayItems.length}` : 'Nothing due today'));
+  const dayItems = el('div', 'map-day-items');
+  if (!todayItems.length) dayItems.append(el('p', 'map-day-empty', 'The map is clear at today.'));
+  todayItems.forEach((item) => {
+    const row = el('button', 'map-day-item');
+    row.type = 'button';
+    row.style.setProperty('--course-color', item.courseColor);
+    row.append(el('strong', null, `${item.courseCode} · ${item.title}`));
+    const progress = store.itemState(item.id);
+    const status = effectiveStatus(item) === 'done' ? 'Done'
+      : progress.resolution ? resolutionLabel(progress.resolution)
+      : progress.externalBlock ? 'Blocked externally'
+      : dueAt(item) && dueAt(item) < new Date() ? 'Listed time passed'
+      : 'Open';
+    const description = `${dateText(item)} · ${status}`;
+    row.append(el('span', null, description));
+    row.setAttribute('aria-label', `${item.courseCode} · ${item.title}. ${description}`);
+    row.addEventListener('click', () => ctx.openDetail(item, row));
+    dayItems.append(row);
+  });
+  day.append(dayItems);
+  toolbar.append(day);
+  wrap.append(toolbar);
   const labels = [...new Set(map.allItems.flatMap((item) => store.itemState(item.id).labels || []))].sort();
   if (labels.length) {
     const filter = el('label', 'map-filter');
@@ -52,6 +89,12 @@ export function renderMap(map, ctx) {
   const axis = buildAxis(scale);
 
   const canvas = el('div', 'canvas');
+  jump.addEventListener('click', () => {
+    const marker = canvas.querySelector('.today-line');
+    if (!marker) return;
+    canvas.scrollTo({ left: Math.max(0, marker.offsetLeft - canvas.clientWidth / 2),
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  });
   const track = el('div', 'track');
   track.style.width = `${scale.trackWidth}px`;
   track.append(buildAxisHeader(axis, scale));
@@ -63,6 +106,7 @@ export function renderMap(map, ctx) {
 
   const line = buildTodayLine(scale);
   if (line) body.append(line);
+  else jump.disabled = true;
 
   map.courses.forEach((course) => body.append(buildCourse(course, scale, ctx, now)));
 

@@ -27,7 +27,10 @@ deadline". Reach it from the toggle, from `?view=plan`, or from the one line Now
 shows on a day that has things due on it.
 
 **Map** is the whole semester on a shared time axis, one region per course. Reach it
-from the toggle or from `?view=map`.
+from the toggle or from `?view=map`. It opens at today. A Today button returns to that
+position after exploring, and a small due-today list opens individual items without
+leaving the map. Repainting a detail keeps the map at the same horizontal position.
+On a narrow phone screen, the five main views stay in a bottom navigation bar.
 
 **Interviews** guides MGT 4803 conversations: open the questions when an interview
 is happening, keep contacts below, and reveal findings and the weekly draft when
@@ -71,8 +74,10 @@ because it is not the app's call to make.
 
 The plan is measured in pomodoros: every work block is 25 minutes, with a 5 minute
 break between them and a 15 minute one after every fourth. Items span several,
-labelled `pomodoro 2 of 4`. A single "3 hours on the exam" block is the shape of thing
-that never gets started; a 25 minute one is.
+labelled `pomodoro 2 of 4`. Exams appear as events with their known window or a
+request to check the start and duration. They do not become guessed work blocks.
+Once a listed time passes, that item leaves the work queue but remains reachable
+above it so a late submission or correction can still be recorded.
 
 ## The timer
 
@@ -160,10 +165,9 @@ restatement of the arithmetic.
 
 ## Due times
 
-The schema records dates. It does not record times, and a plan needs moments rather
-than days, so anything without a time set is treated as due at 11:59 PM and every
-place that assumption shows says so, with the assumed time underlined differently
-from one you set.
+The schema records dates and some course-specific times. A plan needs moments rather
+than days, so an item without a time is treated as due at 11:59 PM only for planning;
+the assumed time is labelled and never treated as a verified date or time.
 
 The detail panel has the correction. Setting a real time re-orders the plan around
 it, and can flip the verdict from fitting to not. Due times live in the same local
@@ -174,6 +178,10 @@ Durations come from the same effort bands the rest of the app uses, budgeted at 
 top of each band and rounded to whole pomodoros: quick is one, medium four, deep
 seven. A plan that runs short is a good surprise; a plan that runs long is the failure
 this surface exists to prevent.
+
+ECON coursework starts at one pomodoro because actual use places those assignments
+at roughly 15 to 30 minutes. An item-level resize overrides that baseline. The
+estimate changes planning duration, not the urgency of the item.
 
 The plan is where you find out an estimate was wrong, so it is also where you fix it.
 The first block of every item carries a **resize** showing what the app currently

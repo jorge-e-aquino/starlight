@@ -13,6 +13,7 @@ import {
   POMODORO,
   POMOFOCUS_URL,
   pomodorosFor,
+  estimateBand,
   EFFORT_MINUTES
 } from './schedule.js';
 import { dateBadge, dateText } from './truth-ui.js';
@@ -141,6 +142,8 @@ export function renderPlan(map, ctx) {
   if (ctx.mountAnim) root.classList.add('mounting');
 
   root.append(buildHead(plan, map, ctx));
+  const exceptions = buildTodayExceptions(plan, map, ctx, at);
+  if (exceptions) root.append(exceptions);
   const risk = pointsAtRiskLine(map, (item) => phase(item, today()));
   if (risk) root.append(risk);
   const exposure = dayExposureLine(map, (item) => phase(item, today()));
@@ -182,17 +185,19 @@ function buildHead(plan, map, ctx) {
   const head = el('header', 'plan-head');
 
   if (plan.mode === 'clear') {
-    head.append(el('h2', 'plan-title', 'Nothing is due today.'));
+    head.append(el('h2', 'plan-title', plan.examEvents.length || plan.expired.length
+      ? 'No coursework left to schedule today.' : 'Nothing is due today.'));
     return head;
   }
 
   if (plan.advisory) {
-    head.append(el('h2', 'plan-title', 'Nothing is due today.'));
+    head.append(el('h2', 'plan-title', plan.examEvents.length || plan.expired.length
+      ? 'No coursework left to schedule today.' : 'Nothing is due today.'));
     head.append(
       el(
         'p',
         'plan-line',
-        `This is a shape for the afternoon built from what is in range, not from deadlines. About ${humanMinutes(
+        `A suggestion from work in range: about ${humanMinutes(
           plan.workMinutes
         )} of work in ${plan.pomodoros} ${plan.pomodoros === 1 ? 'pomodoro' : 'pomodoros'}, finishing around ${formatTime(
           plan.finishAt
@@ -222,14 +227,12 @@ function buildHead(plan, map, ctx) {
   if (plan.fits) {
     const last = plan.lastDeadline;
     verdict.textContent = plan.assumedTimes
-      ? last ? `Work with known times fits before ${formatTime(last)}. Other due times need checking.` : 'Due times are unknown. Check them before relying on this plan.'
-      : `That lands before ${formatTime(last)}, so everything makes its deadline.`;
+      ? last ? `Scheduled coursework with known times fits before ${formatTime(last)}. Other due times need checking.` : 'Due times are unknown. Check them before relying on this plan.'
+      : `Scheduled coursework fits before ${formatTime(last)}.`;
   } else {
-    const worst = plan.overflow[0];
-    const names = plan.overflow.map((r) => r.item.title).join(', ');
-    verdict.textContent = worst.alreadyPast
-      ? `${names} ${plan.overflow.length === 1 ? 'is' : 'are'} already past ${formatTime(worst.dueAt)}. The rest of the plan still fits.`
-      : `This runs about ${humanMinutes(plan.overshootMinutes)} past the deadline on ${names}.`;
+    const first = plan.overflow[0];
+    const others = plan.overflow.length - 1;
+    verdict.textContent = `${first.item.courseCode} · ${first.item.title} runs about ${humanMinutes(first.overBy)} past its listed time${others ? `; ${others} more ${others === 1 ? 'item' : 'items'} also run late` : ''}.`;
   }
   head.append(verdict);
 
@@ -245,7 +248,7 @@ function buildHead(plan, map, ctx) {
     );
   }
 
-  if (!plan.fits && !plan.overflow[0].alreadyPast) {
+  if (!plan.fits) {
     head.append(
       el(
         'p',
@@ -257,6 +260,41 @@ function buildHead(plan, map, ctx) {
 
   head.append(buildTimerPrefs(ctx));
   return head;
+}
+
+function buildTodayExceptions(plan, map, ctx, at) {
+  if (!plan.expired.length && !plan.examEvents.length) return null;
+  const section = el('section', 'plan-exceptions');
+  if (plan.expired.length) {
+    const line = el('p', 'plan-exception-note', `${plan.expired.length} listed ${plan.expired.length === 1 ? 'time has' : 'times have'} passed today. Check what remains possible.`);
+    section.append(line);
+    plan.expired.forEach((item) => {
+      const course = map.courseById.get(item.courseId);
+      const button = el('button', 'plan-exception-item', `${course.code} · ${item.title}`);
+      button.addEventListener('click', () => ctx.openDetail(item, button));
+      section.append(button);
+    });
+  }
+  plan.examEvents.forEach((item) => {
+    const course = map.courseById.get(item.courseId);
+    const dossier = store.itemState(item.id).examDossier;
+    const card = el('article', 'plan-exam-event');
+    card.style.setProperty('--course-color', course.color);
+    const title = el('button', 'plan-exam-title', `${course.code} · ${item.title}`);
+    title.addEventListener('click', () => ctx.openDetail(item, title));
+    card.append(title, dateBadge(item));
+    if (dossier?.confirmed && dossier.startTime && dossier.durationMinutes) {
+      const [hour, minute] = dossier.startTime.split(':').map(Number);
+      const start = new Date(at);
+      start.setHours(hour, minute, 0, 0);
+      const end = new Date(start.getTime() + dossier.durationMinutes * 60000);
+      card.append(el('p', 'plan-exam-meta', `${rangeLabel(start, end)} · ${humanMinutes(dossier.durationMinutes)} exam window`));
+    } else {
+      card.append(el('p', 'plan-exam-meta', `${formatDueTime(item) ? `Listed due ${formatDueTime(item)}. ` : ''}Start and duration need checking.`));
+    }
+    section.append(card);
+  });
+  return section;
 }
 
 // The timer runs here, so the chime and the outside alternative both belong in
@@ -456,13 +494,15 @@ function buildBusy(block, ctx, at) {
 
   const body = el('div', 'block-body');
   body.append(el('div', 'busy-label', block.label));
-  body.append(el('div', 'block-meta', `${humanMinutes(block.minutes)} · not available`));
+  body.append(el('div', 'block-meta', `${humanMinutes(block.minutes)} · ${block.fixed ? 'exam window' : 'not available'}`));
   row.append(body);
 
-  const drop = el('button', 'busy-clear', '×');
-  drop.setAttribute('aria-label', `Remove ${block.label}`);
-  drop.addEventListener('click', () => ctx.act(() => store.removeBusy(block.id, at)));
-  row.append(drop);
+  if (!block.fixed) {
+    const drop = el('button', 'busy-clear', '×');
+    drop.setAttribute('aria-label', `Remove ${block.label}`);
+    drop.addEventListener('click', () => ctx.act(() => store.removeBusy(block.id, at)));
+    row.append(drop);
+  }
   return row;
 }
 
@@ -492,7 +532,7 @@ function buildBlock(block, map, ctx, standing, index, at, plan) {
 
   // The block already states its own length, so the estimate band only needs to
   // say how much of the item this is. "of 4" carries the size on its own.
-  const band = effortBand(item);
+  const band = EFFORT[estimateBand(item)] || effortBand(item);
   const bits = [course.code];
   if (block.wrapUp) bits.push(block.parts === 1 ? 'its pomodoro is done' : `all ${block.parts} pomodoros done`, 'close it out');
   else bits.push(block.parts > 1 ? `pomodoro ${block.part} of ${block.parts}` : band.label.toLowerCase());
@@ -557,7 +597,7 @@ function buildItemChoices(block, ctx, plan, at) {
  */
 function buildResize(item, ctx) {
   const wrap = el('span', 'resize');
-  const current = effortBand(item);
+  const current = EFFORT[estimateBand(item)] || effortBand(item);
   const open = timerUI.resizing === item.id;
 
   const toggle = el('button', 'linky');

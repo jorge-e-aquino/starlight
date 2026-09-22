@@ -1,6 +1,7 @@
 import { now as rightNow, today, formatClock } from './clock.js';
 import { itemState, isSnoozed, dayShape, pomodorosDone } from './state.js';
 import { effortBand, phase, isDone, liveItems, daysUntil } from './signals.js';
+import { isExam } from './exams.js';
 
 /**
  * The schema records dates, and only some items carry a time. A day plan needs
@@ -84,7 +85,16 @@ export function dueAt(item) {
 }
 
 export function budgetFor(item) {
-  return EFFORT_MINUTES[effortBand(item).id] ?? EFFORT_MINUTES.medium;
+  return EFFORT_MINUTES[estimateBand(item)] ?? EFFORT_MINUTES.medium;
+}
+
+// The ECON coursework baseline comes from actual use. It changes schedule
+// estimates only; the urgency window still follows the regular effort model.
+export function estimateBand(item) {
+  const chosen = itemState(item.id).effort;
+  if (chosen && EFFORT_MINUTES[chosen]) return chosen;
+  if (item.courseId === 'econ2105' && item.group === 'econ-coursework') return 'quick';
+  return effortBand(item).id;
 }
 
 // How many pomodoros an item is worth. Splitting is not decoration: a single
@@ -279,10 +289,22 @@ function summarize(queue, blocks, at) {
 
 export function buildDayPlan(allItems, at = rightNow()) {
   const due = dueTodayItems(allItems, at);
-  const setAside = due.filter((it) => isSnoozed(it.id));
-  const active = due.filter((it) => !isSnoozed(it.id));
+  const examEvents = due.filter(isExam);
+  const coursework = due.filter((it) => !isExam(it) && phase(it, today()) !== 'resolved');
+  const expired = coursework.filter((it) => { const deadline = dueAt(it); return deadline && deadline < at; });
+  const available = coursework.filter((it) => !expired.includes(it));
+  const setAside = available.filter((it) => isSnoozed(it.id));
+  const active = available.filter((it) => !isSnoozed(it.id));
   const stillOpen = allItems.filter((it) => phase(it, today()) === 'overdue');
   const shape = resolveDayShape(at);
+  const examBusy = examEvents.flatMap((item) => {
+    const dossier = itemState(item.id).examDossier;
+    if (!dossier?.confirmed || !dossier.startTime || !dossier.durationMinutes) return [];
+    const start = toTimeOnDay(at, dossier.startTime);
+    const end = addMinutes(start, dossier.durationMinutes);
+    return end > at ? [{ id: `exam:${item.id}`, label: `${item.courseCode} · ${item.title}`, start, end, fixed: true }] : [];
+  });
+  const packingShape = { ...shape, busy: [...shape.busy, ...examBusy].sort((a, b) => a.start - b.start) };
 
   let mode = 'due-today';
   let queue = orderQueue(active, shape.first);
@@ -291,7 +313,7 @@ export function buildDayPlan(allItems, at = rightNow()) {
   // built from what is in range, capped, and labelled as a suggestion rather
   // than as deadlines, so the two can never be confused.
   if (!queue.length) {
-    const live = liveItems(allItems, today());
+    const live = liveItems(allItems, today()).filter((it) => !isExam(it) && !expired.includes(it));
     // A chosen item leads even here, and is never the one the cap drops.
     const ordered = shape.first
       ? [...live.filter((it) => it.id === shape.first), ...live.filter((it) => it.id !== shape.first)]
@@ -307,12 +329,12 @@ export function buildDayPlan(allItems, at = rightNow()) {
     mode = picked.length ? 'in-range' : 'clear';
   }
 
-  const { start, busy } = shape;
-  const { blocks, finishAt } = packQueue(queue, shape);
+  const { start } = shape;
+  const { blocks, finishAt } = packQueue(queue, packingShape);
 
   // Claimed time is shown in the timeline too, so the day reads as one continuous
   // thing rather than as work with unexplained gaps in it.
-  const busyRows = busy
+  const busyRows = packingShape.busy
     .filter((b) => b.start < finishAt && b.end > start)
     .map((b) => {
       const from = b.start < start ? start : b.start;
@@ -320,6 +342,7 @@ export function buildDayPlan(allItems, at = rightNow()) {
         kind: 'busy',
         label: b.label,
         id: b.id,
+        fixed: Boolean(b.fixed),
         start: from,
         end: b.end,
         minutes: Math.round((b.end - from) / 60000)
@@ -336,7 +359,7 @@ export function buildDayPlan(allItems, at = rightNow()) {
   // insinuating that it might be.
   let costOfChoosing = false;
   if (chosen && overflow.length && mode === 'due-today') {
-    const plain = packQueue(orderQueue(active, null), shape);
+    const plain = packQueue(orderQueue(active, null), packingShape);
     costOfChoosing = summarize(orderQueue(active, null), plain.blocks, at).every((r) => r.overBy === 0);
   }
 
@@ -353,6 +376,8 @@ export function buildDayPlan(allItems, at = rightNow()) {
     rows,
     queue,
     setAside,
+    expired,
+    examEvents,
     stillOpen,
     finished: finishedToday(allItems, at),
     finishAt,
