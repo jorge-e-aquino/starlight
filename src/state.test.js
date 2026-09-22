@@ -196,6 +196,18 @@ function keepsBackup(actual, expected) {
   check('post-exam answers persist as a stamped decision', state.itemState('sample-exam').examDebrief.different === 'Practice graphs' && Number.isFinite(state.itemState('sample-exam')._t.examDebrief));
 }
 
+{
+  const { state } = await boot();
+  state.confirmTopic('sample-topic', { courseId: 'mgt2250', title: 'Standard deviation', source: 'Lecture notes', examIds: ['sample-exam'] });
+  state.reviewStudyTopic('sample-exam', 'sample-topic', 0, 'cram');
+  check('a wrong cram answer lowers confidence and proposes a sheet prompt', state.snapshot().topics['sample-topic'].confidence === 0 && state.snapshot().topics['sample-topic'].sheetCandidate === true);
+  check('review is a dated log and confidence is a stamped decision', state.itemState('sample-exam').cardReviews.length === 1 && Number.isFinite(state.itemState('sample-exam').cardReviews[0].at) && Number.isFinite(state.snapshot().topics['sample-topic']._t.confidence));
+  state.setSheetCandidate('sample-topic', false);
+  check('a sheet prompt can be cleared by a later decision', state.snapshot().topics['sample-topic'].sheetCandidate === false);
+  for (let i = 0; i < 85; i += 1) state.reviewStudyTopic('sample-exam', 'sample-topic', 2);
+  check('card review history keeps a bounded recent log', state.itemState('sample-exam').cardReviews.length === 80);
+}
+
 if (process.env.STARLIGHT_BACKUP) {
   try {
     const text = await readFile(process.env.STARLIGHT_BACKUP, 'utf8');

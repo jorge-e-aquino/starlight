@@ -24,7 +24,7 @@
 
 // Observation logs. Value is the cap the writer already applies, reapplied here
 // so a merge of two full logs cannot grow past what either side would keep.
-const LOG_FIELDS = { opens: 40, focusDays: 60, sheetDrafts: 20 };
+const LOG_FIELDS = { opens: 40, focusDays: 60, sheetDrafts: 20, cardReviews: 80 };
 
 // Never synced. A running pomodoro belongs to the device you are sitting at, and
 // the sound setting is a property of the room you are in, not of the semester.

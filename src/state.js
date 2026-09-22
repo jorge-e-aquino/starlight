@@ -160,6 +160,21 @@ export function setTopicConfidence(id, confidence) {
   patchFieldRecord('topics', id, { confidence });
 }
 
+export function reviewStudyTopic(examId, topicId, rating, mode = 'cards') {
+  if (!examId || !store.topics?.[topicId] || ![0, 1, 2, 3].includes(rating) || !['cards', 'cram'].includes(mode)) throw new Error('Choose a topic and how it went.');
+  const at = Date.now();
+  const prior = store.topics[topicId].confidence;
+  const confidence = mode === 'cram' && rating === 0 ? Math.max(0, (prior ?? 1) - 1) : rating;
+  patchFieldRecord('topics', topicId, { confidence, ...(mode === 'cram' && rating === 0 ? { sheetCandidate: true } : {}) }, at);
+  const prev = itemState(examId).cardReviews || [];
+  patch(examId, { cardReviews: [...prev, { id: crypto.randomUUID(), topicId, rating, mode, at }].slice(-80) }, at);
+}
+
+export function setSheetCandidate(topicId, value) {
+  if (!store.topics?.[topicId]) throw new Error('Choose a known topic.');
+  patchFieldRecord('topics', topicId, { sheetCandidate: Boolean(value) });
+}
+
 export function setExamDossier(id, fields) {
   if (!id || !fields || typeof fields !== 'object') throw new Error('Choose an exam.');
   if (fields.startTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(fields.startTime)) throw new Error('Enter a valid start time.');

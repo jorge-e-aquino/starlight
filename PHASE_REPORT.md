@@ -327,3 +327,31 @@ details were visually reviewed. An isolated test dossier exposed the sheet
 builder; 120 lines triggered overflow and Print stayed blocked, then all test
 values were cleared. The existing state fixture covers loading, empty, error,
 offline and first-run shell states for the touched views.
+
+## Phase 9: Study
+
+An exam with confirmed linked topics opens a focused study surface from its
+detail. Learning cards reveal a passage from a saved course material when one
+matches, then ask for an honest confidence choice. Due topics and shaky topics
+come first on later passes. Cram reuses the device-local 25 minute focus timer
+and chime; it ends with a small coverage picture, not a score. A shaky Cram
+answer suggests that topic in the exam's cheat sheet editor. Practice questions
+come from sentences in saved materials and show the file and page on reveal;
+the app does not invent an answer when no passage matches. Short topics such
+as GDP match whole words; multiword topics require all terms.
+
+New overlay field `items.<exam>.cardReviews` is a capped union log of dated
+reviews (80), because separate study sessions on devices must both survive.
+Topic `confidence` and `sheetCandidate` are stamped decisions: the latest
+rating and sheet choice replace older claims. Cram's timer remains device-local.
+The topic removal control also lets the user correct a mistaken confirmation.
+No dates were marked verified.
+
+Checks: tests and production build pass. The September 21 backup loaded through
+the real importer, exported without field loss, and survived a storage reload.
+I opened practice, revealed and advanced a sourced question, completed a Cram
+pass with the timer, and inspected the coverage result. Desktop and 390 px
+phone layouts were looked at; the phone has no horizontal overflow. Missing
+topics, no matching source, material loading and failed/offline reads have
+explicit states, with a retry for failures; the shared app shell retains its
+first-run and storage error surfaces.

@@ -96,6 +96,11 @@ export function buildExamSection(item, ctx) {
     row.append(select); coverage.append(row);
   });
   section.append(coverage);
+  if (topics.length) {
+    const study = el('button', 'act small', 'Study these topics');
+    study.addEventListener('click', () => ctx.openStudy(item));
+    section.append(study);
+  }
   if (dossier.cheatSheetRule === 'allowed' && dossier.sheetWidth && dossier.sheetHeight && dossier.sheetPages) section.append(buildSheet(item, dossier, ctx));
   if (store.itemState(item.id).doneAt) {
     const after = field('What you learned afterward', 'learnedAfter', dossier.learnedAfter, 'textarea');
@@ -138,6 +143,22 @@ function buildSheet(item, dossier, ctx) {
     label.append(input, measure); section.append(label); editors.push(input); measures.push(measure);
   }
   const actions = el('div', 'sheet-actions');
+  const candidates = Object.entries(store.snapshot().topics || {}).filter(([, topic]) => !topic.deletedAt && topic.sheetCandidate && (topic.examIds || []).includes(item.id));
+  if (candidates.length) {
+    const prompts = el('details', 'sheet-candidates'); prompts.append(el('summary', null, 'Topics to put on the sheet'));
+    candidates.forEach(([id, topic]) => {
+      const add = el('button', 'act ghost small', `Add ${topic.title}`);
+      add.addEventListener('click', () => {
+        editors[0].value += `${editors[0].value ? '\n' : ''}${topic.title}: `;
+        measures[0].textContent = editors[0].value + '\n';
+        message.textContent = measures[0].scrollHeight > measures[0].clientHeight + 3 ? 'Page 1 overflows.' : 'Unsaved changes. Page fits.';
+        editors[0].focus();
+        ctx.act(() => { store.setCheatSheet(item.id, editors.map((input) => input.value)); store.setSheetCandidate(id, false); });
+      });
+      prompts.append(add);
+    });
+    section.append(prompts);
+  }
   const save = el('button', 'act small', 'Save sheet');
   save.addEventListener('click', () => { ctx.act(() => store.setCheatSheet(item.id, editors.map((input) => input.value))); message.textContent = 'Saved.'; });
   const print = el('button', 'act ghost small', 'Print sheet');

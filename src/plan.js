@@ -29,6 +29,7 @@ import { buildPrepNotice } from './exam-ui.js';
  * the way the masthead clock already does, and only real transitions repaint.
  */
 const timerUI = { ctx: null, titled: false };
+export function setTimerContext(ctx) { timerUI.ctx = ctx; }
 
 function timerFor(block) {
   const t = store.timerState();
@@ -73,7 +74,7 @@ function resumeTimer(t) {
  */
 function finishTimer(t, { chime = true } = {}) {
   if (chime && store.soundOn()) {
-    if (t.kind === 'work') chimeWorkDone();
+    if (t.kind === 'work' || t.kind === 'cram') chimeWorkDone();
     else chimeBreakDone();
   }
   if (t.kind === 'work' && t.itemId) {

@@ -184,10 +184,16 @@ export function renderIntake(map, ctx) {
   advanced.append(docs);
   const knowledge = el('details', 'intake-card'); knowledge.append(el('summary', 'intake-section-summary', 'Confirmed course knowledge'));
   const facts = Object.values(store.snapshot().courseFacts || {}).filter((fact) => fact.confirmedAt && !fact.deletedAt);
-  const topics = Object.values(store.snapshot().topics || {}).filter((topic) => topic.confirmedAt && !topic.deletedAt);
+  const topics = Object.entries(store.snapshot().topics || {}).filter(([, topic]) => topic.confirmedAt && !topic.deletedAt);
   if (!facts.length && !topics.length) knowledge.append(el('p', 'fine', 'No syllabus facts or topics confirmed yet. Extracted suggestions appear here only after you accept each one.'));
   facts.forEach((fact) => knowledge.append(el('p', 'knowledge-row', `${map.courseById.get(fact.courseId)?.code || fact.courseId} · ${FACT_NAMES[fact.kind] || fact.kind} · ${fact.source}`)));
-  topics.forEach((topic) => knowledge.append(el('p', 'knowledge-row', `${map.courseById.get(topic.courseId)?.code || topic.courseId} · ${topic.title} · ${topic.source}`)));
+  topics.forEach(([id, topic]) => {
+    const row = el('p', 'knowledge-row', `${map.courseById.get(topic.courseId)?.code || topic.courseId} · ${topic.title} · ${topic.source} `);
+    const remove = el('button', 'linky', 'Remove topic');
+    remove.setAttribute('aria-label', `Remove ${topic.title}`);
+    remove.addEventListener('click', () => ctx.act(() => store.removeTopic(id)));
+    row.append(remove); knowledge.append(row);
+  });
   advanced.append(knowledge);
   root.append(advanced);
   return root;

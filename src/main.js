@@ -5,6 +5,7 @@ import { renderMap, starSvg } from './render.js';
 import { renderNow } from './now.js';
 import { renderField } from './field-ui.js';
 import { renderIntake } from './intake-ui.js';
+import { renderStudy } from './study-ui.js';
 import { renderPlan } from './plan.js';
 import { renderCheckin, renderEvening } from './ritual.js';
 import { buildDayPlan } from './schedule.js';
@@ -49,7 +50,7 @@ const anim = { mount: true, focusChanged: false };
 
 // The chosen view is part of the URL, so a particular way of looking at the
 // semester can be bookmarked or reopened.
-const VIEWS = ['now', 'plan', 'field', 'map', 'intake', 'checkin', 'evening'];
+const VIEWS = ['now', 'plan', 'field', 'map', 'intake', 'checkin', 'evening', 'study'];
 const requestedView = new URLSearchParams(location.search).get('view');
 const startView = VIEWS.includes(requestedView) ? requestedView : 'now';
 
@@ -62,7 +63,8 @@ const ui = {
   awayDismissed: false,
   firstRunDismissed: false,
   paletteOpen: false,
-  labelFilter: ''
+  labelFilter: '',
+  studyExamId: new URLSearchParams(location.search).get('exam')
 };
 
 function itemFromHash(map) {
@@ -95,6 +97,9 @@ try {
     togglePast: () => { ui.pastExpanded = !ui.pastExpanded; paint(); },
     dismissAway: () => { ui.awayDismissed = true; paint(); },
     openPlan: () => setView('plan'),
+    openMaterials: () => setView('intake'),
+    openStudy: (exam) => { ui.studyExamId = exam.id; detail.hide(); setView('study'); },
+    closeStudy: (exam) => { setView('now'); ctx.openDetail(exam, null, { silent: true }); },
     openCheckin: () => { ui.checkinStep = 0; setView('checkin'); },
     openEvening: () => setView('evening'),
     closeCheckin: () => setView('now'),
@@ -140,7 +145,7 @@ try {
     shell.replaceChildren(
       buildMasthead(map, focus),
       ...buildAppStates(),
-      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' || ui.view === 'intake' ? [] : buildEdgeTargets(ui.view)),
+      ...(ui.view === 'map' || ui.view === 'checkin' || ui.view === 'evening' || ui.view === 'field' || ui.view === 'intake' || ui.view === 'study' ? [] : buildEdgeTargets(ui.view)),
       surfaceFor(ui.view),
       ...(ui.paletteOpen ? [buildPalette(map)] : [])
     );
@@ -189,6 +194,7 @@ try {
     if (view === 'plan') return renderPlan(map, ctx);
     if (view === 'field') return renderField(map, ctx);
     if (view === 'intake') return renderIntake(map, ctx);
+    if (view === 'study') return renderStudy(map, ctx, ui.studyExamId);
     if (view === 'map') return renderMap(map, ctx);
     if (view === 'checkin') return renderCheckin(map, ctx);
     if (view === 'evening') return renderEvening(map, ctx);
@@ -202,6 +208,8 @@ try {
     const url = new URL(location.href);
     if (id === 'now') url.searchParams.delete('view');
     else url.searchParams.set('view', id);
+    if (id === 'study' && ui.studyExamId) url.searchParams.set('exam', ui.studyExamId);
+    else url.searchParams.delete('exam');
     try {
       history.replaceState(null, '', url);
     } catch {

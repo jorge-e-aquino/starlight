@@ -2969,6 +2969,23 @@ button { font: inherit; color: inherit; }
 .sheet-actions, .sheet-history { display: flex; flex-wrap: wrap; gap: var(--space-8); margin-top: var(--space-12); }
 .sheet-history { display: block; }
 .sheet-print { display: none; }
+.study-view { width: min(calc(100% - var(--space-32)), var(--size-reading)); margin: var(--space-40) auto var(--space-72); }
+.study-view > .focus-eyebrow { margin-top: var(--space-24); }
+.study-title { margin: var(--space-8) 0 var(--space-24); font-size: var(--text-title); color: var(--ink); }
+.study-modes { display: flex; flex-wrap: wrap; gap: var(--space-8); margin-bottom: var(--space-18); }
+.study-modes [aria-pressed="true"] { color: var(--accent-ink); border-color: var(--accent); background: var(--surface-panel); }
+.study-card { max-width: var(--size-message); padding: var(--space-28); border: var(--space-1) solid var(--glass-edge); border-radius: var(--space-16); background: var(--glass-strong); box-shadow: var(--glass-shadow); }
+.study-card h3 { font-size: var(--text-heading); color: var(--ink); margin: var(--space-16) 0; }
+.study-card .fine { color: var(--ink-soft); }
+.study-prompt, .study-source { line-height: var(--leading-1-5); color: var(--ink); }
+.study-source { border-left: var(--space-2) solid var(--accent); padding-left: var(--space-14); white-space: pre-wrap; }
+.study-rating { display: flex; gap: var(--space-8); flex-wrap: wrap; margin-top: var(--space-18); }
+.study-timer { display: flex; align-items: center; gap: var(--space-12); margin-bottom: var(--space-16); }
+.study-coverage-bar { height: var(--space-12); display: flex; overflow: hidden; border-radius: var(--space-8); background: var(--rule); }
+.study-coverage-bar [data-kind="shaky"] { background: var(--state-conflict-ink); }
+.study-coverage-bar [data-kind="steady"] { background: var(--state-verified-ink); }
+.study-coverage-bar [data-kind="unchecked"] { background: var(--ink-faint); }
+@media (max-width: 560px) { .study-view { width: auto; margin: var(--space-24) var(--space-18) var(--space-54); } .study-card { padding: var(--space-20); } }
 @media (max-width: 560px) {
   .exam-dossier-form { grid-template-columns: 1fr; }
   .exam-step, .prep-notice-row { flex-wrap: wrap; }
