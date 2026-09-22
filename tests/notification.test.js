@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { DAILY_REGULAR_LIMIT, selectNotifications, morningCandidate, examMorningCandidate } from '../src/notification.js';
+import { DAILY_REGULAR_LIMIT, selectNotifications, morningCandidate, examMorningCandidate, examReadinessCandidate } from '../src/notification.js';
 
 const regular = (id, priority = 1) => ({ id, itemId: id, kind: 'regular', priority, title: `ECON 2105 · ${id}`, action: 'Open it' });
 const exam = { ...regular('exam'), kind: 'exam-morning' };
@@ -22,5 +22,9 @@ assert.equal(examMorningCandidate(item, dossier, trust, '2026-10-02').kind, 'exa
 assert.equal(examMorningCandidate(item, { ...dossier, confirmed: false }, trust, '2026-10-02'), null);
 assert.equal(examMorningCandidate(item, dossier, { ...trust, source: '' }, '2026-10-02'), null);
 assert.equal(examMorningCandidate(item, dossier, trust, '2026-10-03'), null);
+const disputed = examReadinessCandidate(item, { status: 'contradicted' }, '2026-09-30', 2);
+assert.match(disputed.action, /sources disagree/);
+assert.equal(disputed.action.includes('Starts'), false);
+assert.equal(examReadinessCandidate(item, trust, '2026-09-30', 3), null);
 
 console.log('Notification policy checks passed.');

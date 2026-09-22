@@ -51,6 +51,25 @@ export function noticingCandidate(item, trust, dayKey) {
   };
 }
 
+export function examReadinessCandidate(item, trust, dayKey, daysAway) {
+  if (!item?.id || !item.courseCode || !item.title || !dayKey || ![0, 1, 2].includes(daysAway)) return null;
+  const action = trust?.status === 'contradicted'
+    ? 'Exam sources disagree. Check the current course instructions.'
+    : trust?.status !== 'verified'
+      ? 'The listed exam time is unchecked. Check the course source.'
+      : daysAway === 0
+        ? 'Open the exam brief and check launch details.'
+        : 'Open the exam brief and choose a preparation step.';
+  return {
+    id: `exam:readiness:${item.id}:${dayKey}`,
+    itemId: item.id,
+    kind: 'regular',
+    priority: daysAway === 0 ? 20 : daysAway === 1 ? 13 : 8,
+    title: `${item.courseCode} · ${item.title}`,
+    action
+  };
+}
+
 /** A dossier must support every concrete claim in an exam-morning alert. */
 export function examMorningCandidate(item, dossier, trust, dayKey) {
   if (!item || !dossier || trust?.status !== 'verified' || !trust.source || trust.date !== dayKey) return null;
