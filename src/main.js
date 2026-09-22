@@ -85,6 +85,7 @@ try {
     get awayDismissed() { return ui.awayDismissed; },
     get checkinStep() { return ui.checkinStep; },
     get firstRun() { return firstRun; },
+    get firstRunDismissed() { return ui.firstRunDismissed; },
     get labelFilter() { return ui.labelFilter; },
     setLabelFilter: (label) => { ui.labelFilter = label; paint(); },
     get focusItem() { return pickFocus(map.allItems); },

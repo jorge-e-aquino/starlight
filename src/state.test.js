@@ -178,6 +178,24 @@ function keepsBackup(actual, expected) {
   check('a later successful write saves the whole session', saved.items.sample.startedAt === 123 && saved.items.sample.doneAt === 124);
 }
 
+{
+  const { state } = await boot();
+  state.setExamDossier('sample-exam', { location: 'Room TBD', source: 'Syllabus checked' });
+  check('partial exam details stay unconfirmed', state.itemState('sample-exam').examDossier.confirmed === false);
+  check('saving exam details does not verify a date', !state.itemState('sample-exam').dateTrust);
+  state.setExamDossier('sample-exam', { startTime: '09:00', durationMinutes: 60, questionCount: 25,
+    questionFormat: 'Multiple choice', materials: 'ID', cheatSheetRule: 'allowed', sheetWidth: 8.5,
+    sheetHeight: 11, sheetPages: 1, calculatorPolicy: 'No calculator', topicsCovered: 'Chapters 1 to 3',
+    submissionMethod: 'In person' });
+  check('source-backed complete dossier enables exam morning facts', state.itemState('sample-exam').examDossier.confirmed === true);
+  state.setCheatSheet('sample-exam', ['first draft']);
+  state.setCheatSheet('sample-exam', ['revised draft']);
+  check('sheet edits preserve prior drafts', state.itemState('sample-exam').sheetDrafts[0].pages[0] === 'first draft');
+  check('sheet content is a stamped decision', Number.isFinite(state.itemState('sample-exam')._t.cheatSheet));
+  state.setExamDebrief('sample-exam', { format: 'Multiple choice', topics: 'Graphs', different: 'Practice graphs' });
+  check('post-exam answers persist as a stamped decision', state.itemState('sample-exam').examDebrief.different === 'Practice graphs' && Number.isFinite(state.itemState('sample-exam')._t.examDebrief));
+}
+
 if (process.env.STARLIGHT_BACKUP) {
   try {
     const text = await readFile(process.env.STARLIGHT_BACKUP, 'utf8');

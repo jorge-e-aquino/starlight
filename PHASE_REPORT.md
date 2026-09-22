@@ -289,3 +289,41 @@ policy suggestions, none confirmed; a Business Lab PDF saved and reopened with
 an explicit scanned/no-selectable-text result. A text syllabus was extracted,
 reopened, and attached to a live item. Private Blob was connected to Vercel
 production and preview. Hosted upload/download validation follows deployment.
+
+## Phase 8: Exam preparation
+
+Every exam has a source-backed dossier for start time, duration, location,
+question count and format, materials, cheat sheet rule and dimensions,
+calculator, covered topics, and submission method. Partial details stay
+incomplete; saving them never verifies the exam date. A completed dossier can
+support the exam-morning reminder. Unknown and contradictory dates retain their
+truth labels throughout preparation.
+
+Preparation steps derive from each exam's current date at T-10, T-7, T-5,
+T-3, T-1, and exam day. Inapplicable steps stay out. The rules task supplies a
+deadline for an incomplete dossier, and the closest relevant task appears in
+Now as one contextual disclosure and in Plan as a short list. Steps have
+separate completion state, while moving an exam date regenerates their dates.
+Known topics show confidence and the first pass names the weakest topics.
+
+The sheet editor is scoped to the exam's recorded width, height, and page
+count. Its live page measurement blocks printing when content overflows, while
+the print stylesheet uses those physical dimensions. Saves preserve earlier
+drafts. After a marked-taken exam, three debrief answers record format, topics,
+and what to change; the next exam in that course shows this context for review.
+
+New overlay fields: `items.<exam>.examDossier`, `items.<exam>.cheatSheet`,
+`items.<exam>.examDebrief`, derived step `doneAt` and topic `confidence` are
+stamped decisions because they represent current claims or completion choices.
+`items.<exam>.sheetDrafts` is a capped union log of earlier sheet versions so
+editing does not erase a prior draft across devices. No schema dates were
+marked verified.
+
+Checks: exam date regeneration, rule suppression, topic ranking, previous exam
+inheritance, partial and complete dossier state, draft history and merge were
+tested. The real September 21 backup loaded through the importer, exported
+without missing fields, and survived a reload. Desktop and 390 px phone exam
+details were visually reviewed. An isolated test dossier exposed the sheet
+builder; 120 lines triggered overflow and Print stayed blocked, then all test
+values were cleared. The existing state fixture covers loading, empty, error,
+offline and first-run shell states for the touched views.

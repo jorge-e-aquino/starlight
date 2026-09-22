@@ -253,6 +253,7 @@
   --size-sync-card: 420px;
   --size-sync-message: 520px;
   --size-message: 560px;
+  --size-sheet-editor: 240px;
   --wash-lavender-height: 640px;
   --size-reading: 720px;
   --wash-pink-height: 780px;
@@ -2938,6 +2939,46 @@ button { font: inherit; color: inherit; }
 .reminder-form { display: grid; gap: var(--space-12); }
 .reminder-form label { display: grid; gap: var(--space-6); font-size: var(--text-control); color: var(--ink-soft); }
 .reminder-form .act { justify-self: start; }
+/* Exam prep stays behind the item. Derived deadlines remain visible in one short disclosure. */
+.exam-prep, .prep-notice { margin-top: var(--space-16); border: var(--space-1) solid var(--rule); border-radius: var(--space-12); background: var(--surface-panel); padding: var(--space-14); }
+.exam-prep > summary, .prep-notice > summary, .exam-sheet > summary { cursor: pointer; color: var(--ink); font-weight: var(--weight-650); }
+.exam-prep > .fine { display: block; margin: var(--space-8) 0 var(--space-16); }
+.exam-dossier-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12); }
+.exam-dossier-form h3, .exam-dossier-form .act, .exam-dossier-form .exam-field:has(textarea) { grid-column: 1 / -1; }
+.exam-dossier-form h3, .exam-ladder h3, .exam-topics h3 { margin: var(--space-16) 0 var(--space-4); font-size: var(--text-heading); }
+.exam-field { display: grid; gap: var(--space-6); color: var(--ink-soft); font-size: var(--text-control); }
+.exam-field .truth-input { min-width: 0; width: 100%; }
+.exam-field textarea { min-height: var(--space-72); }
+.exam-debrief { display: grid; gap: var(--space-12); margin-top: var(--space-24); }
+.exam-debrief h3 { margin: 0; font-size: var(--text-heading); }
+.exam-prior { margin: var(--space-12) 0; padding: var(--space-10); border-left: var(--space-2) solid var(--accent); }
+.exam-prior summary { cursor: pointer; }
+.exam-prior p { margin: var(--space-6) 0; }
+.exam-dossier-form .act { justify-self: start; }
+.exam-ladder, .exam-topics { display: grid; gap: var(--space-10); margin-top: var(--space-24); }
+.exam-step, .prep-notice-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-12); padding: var(--space-10); border-top: var(--space-1) solid var(--rule); }
+.exam-step > div, .prep-notice-row { min-width: 0; }
+.exam-step .fine, .prep-notice-row .fine { display: block; margin-top: var(--space-4); }
+.exam-step[data-done="true"] strong { text-decoration: line-through; color: var(--ink-faint); }
+.exam-topic { display: grid; gap: var(--space-8); grid-template-columns: 1fr auto; align-items: center; }
+.exam-topic select { min-width: var(--space-88); }
+.exam-sheet { margin-top: var(--space-24); padding-top: var(--space-16); border-top: var(--space-1) solid var(--rule); }
+.sheet-label { display: grid; gap: var(--space-8); margin-top: var(--space-16); font-size: var(--text-control); color: var(--ink-soft); }
+.sheet-editor { box-sizing: border-box; display: block; width: 100%; min-height: var(--size-sheet-editor); padding: var(--space-12); resize: vertical; background: var(--surface-input); color: var(--ink); border: var(--space-1) solid var(--rule); font: 12pt/1.2 ui-monospace, monospace; }
+.sheet-measure { position: absolute; visibility: hidden; pointer-events: none; box-sizing: border-box; width: calc(var(--sheet-width) - 0.5in); height: calc(var(--sheet-height) - 0.5in); overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; color: black; font: 12pt/1.2 ui-monospace, monospace; }
+.sheet-actions, .sheet-history { display: flex; flex-wrap: wrap; gap: var(--space-8); margin-top: var(--space-12); }
+.sheet-history { display: block; }
+.sheet-print { display: none; }
+@media (max-width: 560px) {
+  .exam-dossier-form { grid-template-columns: 1fr; }
+  .exam-step, .prep-notice-row { flex-wrap: wrap; }
+}
+@media (pointer: coarse) { .exam-step .act, .prep-notice-row .act { min-height: 44px; } }
+@media print {
+  body > #app { display: none !important; }
+  .sheet-print { display: block; }
+  .sheet-print-page { box-sizing: border-box; width: calc(var(--sheet-width) - 0.5in); height: calc(var(--sheet-height) - 0.5in); white-space: pre-wrap; overflow: hidden; break-after: page; color: black; font: 12pt/1.2 ui-monospace, monospace; }
+}
 @media (max-width: 760px) {
   .checkin { width: auto; margin: var(--space-24) var(--space-18) var(--space-54); }
   .checkin-card { padding: var(--space-20); }

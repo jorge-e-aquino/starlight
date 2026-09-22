@@ -22,6 +22,7 @@ import {
 import * as store from './state.js';
 import { documentRows } from './document-ui.js';
 import { effectiveCourse } from './course-facts.js';
+import { buildExamSection } from './exam-ui.js';
 
 const TYPE_LABEL = {
   regular: 'Coursework',
@@ -151,6 +152,8 @@ export function createDetailPanel(ctx) {
 
     if (item.type !== 'standing') {
       body.append(collapsible('Date and sources', buildDateTrustForm(item, ctx)));
+      const exam = buildExamSection(item, ctx);
+      if (exam) body.append(exam);
       body.append(collapsible('Outcome', buildResolutionForm(item, course, ctx)));
       body.append(collapsible('External block', buildExternalBlockForm(item, ctx)));
       const links = buildLinks(item, course);

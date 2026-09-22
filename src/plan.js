@@ -20,6 +20,7 @@ import { buildGradeSection, pointsAtRiskLine, dayExposureLine } from './grade-ui
 import { effortBand, EFFORT, completionVerb, daysUntil, effectiveStatus, phase } from './signals.js';
 import { today } from './clock.js';
 import * as store from './state.js';
+import { buildPrepNotice } from './exam-ui.js';
 
 /**
  * The timer is deliberately not part of the render tree's state. The plan
@@ -143,6 +144,8 @@ export function renderPlan(map, ctx) {
   if (risk) root.append(risk);
   const exposure = dayExposureLine(map, (item) => phase(item, today()));
   if (exposure) root.append(exposure);
+  const prep = buildPrepNotice(map, ctx, 5);
+  if (prep) root.append(prep);
 
   const ask = buildAsk(map, ctx);
   if (ask) root.append(ask);

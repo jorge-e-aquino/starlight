@@ -18,6 +18,7 @@ import {
 import { dueTodayItems } from './schedule.js';
 import { dateBadge, resolutionLabel } from './truth-ui.js';
 import * as store from './state.js';
+import { buildPrepNotice } from './exam-ui.js';
 import { buildSyncStatus } from './syncui.js';
 import { recoveryChoice } from './attention.js';
 
@@ -71,6 +72,8 @@ export function renderNow(map, ctx) {
 
   const rest = live.slice(1);
   if (rest.length) root.append(buildQueue(rest, map, ctx, now));
+  const prep = !ctx.firstRun || ctx.firstRunDismissed ? buildPrepNotice(map, ctx) : null;
+  if (prep) root.append(prep);
 
   const horizon = horizonItem(items, now);
   if (horizon) {

@@ -85,6 +85,15 @@ const item = (fields, t) => ({ ...fields, _t: t });
 
 // --- device-local fields never cross ---
 {
+  const a = { items: { exam: item({ cheatSheet: ['draft two'], sheetDrafts: [{ id: 'a', pages: ['draft one'], at: 1 }] }, { cheatSheet: 2 }) } };
+  const b = { items: { exam: item({ cheatSheet: ['draft three'], sheetDrafts: [{ id: 'b', pages: ['draft two'], at: 3 }] }, { cheatSheet: 4 }) } };
+  const merged = mergeState(a, b).items.exam;
+  check('latest sheet text wins as a decision', merged.cheatSheet[0] === 'draft three');
+  check('prior sheet drafts union as a capped log', merged.sheetDrafts.length === 2 && merged.sheetDrafts[0].id === 'a' && merged.sheetDrafts[1].id === 'b');
+}
+
+// --- device-local fields never cross ---
+{
   const local = { timer: { endsAt: 5 }, sound: false, items: {} };
   const remote = { timer: { endsAt: 999 }, sound: true, items: {} };
   const m = mergeState(local, remote);

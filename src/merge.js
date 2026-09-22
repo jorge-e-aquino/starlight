@@ -24,7 +24,7 @@
 
 // Observation logs. Value is the cap the writer already applies, reapplied here
 // so a merge of two full logs cannot grow past what either side would keep.
-const LOG_FIELDS = { opens: 40, focusDays: 60 };
+const LOG_FIELDS = { opens: 40, focusDays: 60, sheetDrafts: 20 };
 
 // Never synced. A running pomodoro belongs to the device you are sitting at, and
 // the sound setting is a property of the room you are in, not of the semester.
@@ -78,6 +78,7 @@ function toArray(v) {
 // ("2026-9-7" vs "2026-10-7"), so compare them by the date they denote.
 function compareLogEntries(a, b) {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
+  if (Number.isFinite(a?.at) && Number.isFinite(b?.at)) return a.at - b.at || (tieKey(a) > tieKey(b) ? 1 : tieKey(a) < tieKey(b) ? -1 : 0);
   return dayKeyValue(a) - dayKeyValue(b) || (tieKey(a) > tieKey(b) ? 1 : tieKey(a) < tieKey(b) ? -1 : 0);
 }
 

@@ -155,6 +155,44 @@ export function confirmTopic(id, topic) {
 
 export function removeTopic(id) { patchFieldRecord('topics', id, { deletedAt: Date.now() }); }
 
+export function setTopicConfidence(id, confidence) {
+  if (!store.topics?.[id] || ![0, 1, 2, 3].includes(confidence)) throw new Error('Choose a known topic and confidence.');
+  patchFieldRecord('topics', id, { confidence });
+}
+
+export function setExamDossier(id, fields) {
+  if (!id || !fields || typeof fields !== 'object') throw new Error('Choose an exam.');
+  if (fields.startTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(fields.startTime)) throw new Error('Enter a valid start time.');
+  for (const key of ['durationMinutes', 'questionCount', 'sheetWidth', 'sheetHeight', 'sheetPages']) {
+    if (fields[key] !== null && fields[key] !== undefined && fields[key] !== '' && (!Number.isFinite(Number(fields[key])) || Number(fields[key]) <= 0)) throw new Error('Use positive numbers for exam dimensions and counts.');
+  }
+  if (Number(fields.sheetPages) > 12 || Number(fields.sheetWidth) > 20 || Number(fields.sheetHeight) > 20) throw new Error('Check the sheet dimensions and use up to 12 pages.');
+  const prior = itemState(id).examDossier || {};
+  const next = { ...prior, ...structuredClone(fields) };
+  const required = ['startTime', 'durationMinutes', 'location', 'questionCount', 'questionFormat', 'materials', 'cheatSheetRule', 'calculatorPolicy', 'topicsCovered', 'submissionMethod', 'source'];
+  next.confirmed = Boolean(required.every((key) => next[key] !== null && next[key] !== undefined && String(next[key]).trim()) &&
+    (next.cheatSheetRule !== 'allowed' || (next.sheetWidth && next.sheetHeight && next.sheetPages)));
+  patch(id, { examDossier: next });
+}
+
+export function setCheatSheet(id, pages) {
+  if (!id || !Array.isArray(pages) || pages.length > 12 || pages.some((page) => typeof page !== 'string' || page.length > 20000)) throw new Error('Keep each sheet page under 20,000 characters.');
+  const prior = itemState(id).cheatSheet || [];
+  const changed = JSON.stringify(prior) !== JSON.stringify(pages);
+  if (!changed) return;
+  const sheetDrafts = prior.some(Boolean) ? [...(itemState(id).sheetDrafts || []), { id: crypto.randomUUID(), pages: prior, at: Date.now() }].slice(-20) : itemState(id).sheetDrafts || [];
+  patch(id, { cheatSheet: [...pages], sheetDrafts });
+}
+
+export function setExamDebrief(id, value) {
+  if (!id || !value || ['format', 'topics', 'different'].some((key) => !value[key]?.trim() || value[key].length > 2000)) {
+    throw new Error('Answer the three short exam debrief questions.');
+  }
+  patch(id, { examDebrief: {
+    format: value.format.trim(), topics: value.topics.trim(), different: value.different.trim(), recordedAt: Date.now()
+  } });
+}
+
 export function registerDocument(id, document) {
   if (!id || !document?.courseId || !document.name?.trim() || !Number.isFinite(document.size) || document.size < 0 || !document.type) {
     throw new Error('Choose a course and a readable document.');
