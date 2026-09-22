@@ -249,6 +249,7 @@
   --size-tooltip: 250px;
   --size-edge-target: 300px;
   --size-detail: 366px;
+  --size-detail-mobile: 82dvh;
   --size-edge-hint: 380px;
   --size-sync-card: 420px;
   --size-sync-message: 520px;
@@ -312,6 +313,7 @@
     0 0 var(--space-22) var(--orchid-65),
     0 0 var(--space-44) var(--indigo-40);
   --shadow-detail: calc(var(--space-16) * -1) 0 var(--space-50) var(--shadow-12);
+  --shadow-detail-mobile: 0 calc(var(--space-16) * -1) var(--space-50) var(--shadow-12);
   --shadow-tag-star-tag: 0 var(--space-3) var(--space-12) var(--violet-35);
   --shadow-k-orb: 0 0 var(--space-8) var(--orchid-60);
   --shadow-view-toggle-on: 0 var(--space-3) var(--space-10) var(--violet-30);
@@ -1006,6 +1008,8 @@ button { font: inherit; color: inherit; }
 
 .detail.open { transform: translateX(0); }
 
+.detail-handle { display: none; }
+
 .detail .close {
   position: absolute;
   top: var(--space-20);
@@ -1628,7 +1632,7 @@ button { font: inherit; color: inherit; }
 .fine { margin: var(--space-9) 0 0; font-size: var(--text-caption); color: var(--ink-faint); line-height: var(--leading-1-5); }
 
 .collapsible { margin-top: var(--space-20); }
-.collapsible summary {
+.collapsible > summary {
   cursor: pointer;
   font-size: var(--text-label-small);
   font-weight: var(--weight-650);
@@ -1637,9 +1641,9 @@ button { font: inherit; color: inherit; }
   color: var(--ink-faint);
   list-style: none;
 }
-.collapsible summary::-webkit-details-marker { display: none; }
-.collapsible summary::before { content: '▸ '; }
-.collapsible[open] summary::before { content: '▾ '; }
+.collapsible > summary::-webkit-details-marker { display: none; }
+.collapsible > summary::before { content: '▸ '; }
+.collapsible[open] > summary::before { content: '▾ '; }
 
 /* ================= map: distance reads as distance ================= */
 
@@ -2999,6 +3003,35 @@ button { font: inherit; color: inherit; }
   }
   .view-toggle button { min-height: var(--target-touch); }
   .map-toolbar { padding-left: var(--space-10); padding-right: var(--space-10); }
+  .detail {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: min(var(--size-detail-mobile), calc(100dvh - env(safe-area-inset-top) - var(--space-20)));
+    padding: var(--space-32) var(--space-20) calc(var(--space-40) + env(safe-area-inset-bottom));
+    border: var(--space-1) solid var(--glass-edge);
+    border-bottom: 0;
+    border-radius: var(--space-24) var(--space-24) 0 0;
+    box-shadow: var(--shadow-detail-mobile);
+    transform: translateY(100%);
+    overscroll-behavior: contain;
+  }
+  .detail.open { transform: translateY(0); }
+  .detail-handle {
+    display: block;
+    position: absolute;
+    top: var(--space-12);
+    left: 50%;
+    width: var(--space-38);
+    height: var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--ink-faint);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
 }
 
 /* A short daily check-in stays separate from the working list. */

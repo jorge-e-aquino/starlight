@@ -31,6 +31,12 @@ from the toggle or from `?view=map`. It opens at today. A Today button returns t
 position after exploring, and a small due-today list opens individual items without
 leaving the map. Repainting a detail keeps the map at the same horizontal position.
 On a narrow phone screen, the five main views stay in a bottom navigation bar.
+Item details rise from the bottom on a phone so the course, current status and
+first action read as one short sheet. The same detail stays at the side on a
+laptop. Opening another item starts at its top rather than retaining the last
+item's scroll position. Empty first-step and score forms, time estimates and
+due-time corrections sit under More details until they are needed. A recorded
+block or outcome stays visible because that state changes the task's next move.
 
 **Interviews** guides MGT 4803 conversations: open the questions when an interview
 is happening, keep contacts below, and reveal findings and the weekly draft when

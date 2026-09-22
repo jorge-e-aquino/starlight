@@ -60,8 +60,10 @@ export function createDetailPanel(ctx) {
 
   const close = el('button', 'close', '×');
   close.setAttribute('aria-label', 'Close detail panel');
+  const handle = el('span', 'detail-handle');
+  handle.setAttribute('aria-hidden', 'true');
   const body = el('div', 'detail-body');
-  panel.append(close, body);
+  panel.append(handle, close, body);
 
   // Clicking off the panel closes it, but nothing is covered by an overlay: the
   // rest of the app stays fully clickable, so clicking a different assignment
@@ -105,10 +107,13 @@ export function createDetailPanel(ctx) {
 
   function show(item, course, isFocus, trigger, { silent = false } = {}) {
     if (trigger) lastFocused = trigger;
+    const changedItem = openItem?.id !== item.id;
     openItem = item;
     // Opening the detail is the signal that feeds circling detection.
     if (!silent) store.recordOpen(item.id);
     paint(item, course, isFocus);
+    panel.setAttribute('aria-label', `${course.code} · ${item.title}`);
+    if (changedItem) panel.scrollTop = 0;
     lastOpenAt = Date.now();
     panel.classList.add('open');
     try { history.replaceState(null, '', `#item=${item.id}`); } catch { /* isolated preview */ }
@@ -144,6 +149,8 @@ export function createDetailPanel(ctx) {
     else if (where === 'ahead') tags.append(el('span', 'tag', 'Not yet in range'));
     if (!item.confirmed) tags.append(el('span', 'tag dashed', 'Not confirmed'));
     body.append(tags);
+    const more = el('details', 'collapsible detail-more');
+    more.append(el('summary', null, 'More details'));
 
     // Exam rules are the first action context. Coursework keeps its direct verbs.
     const dateDetails = item.type === 'standing' ? null : collapsible('Date and sources',
@@ -157,7 +164,7 @@ export function createDetailPanel(ctx) {
     else body.append(buildActions(item));
 
     if (!exam && item.type !== 'standing' && !['absorbed', 'cant-submit'].includes(state.resolution?.state)) {
-      body.append(buildStepBox(item));
+      body.append(state.firstStep ? buildStepBox(item) : collapsible('Add a first step', buildStepBox(item, false)));
       if (!['exam', 'final'].includes(item.type)) {
         const writing = collapsible('Writing help', buildWritingHelp(item));
         writing.open = writingOpen.has(item.id);
@@ -169,19 +176,22 @@ export function createDetailPanel(ctx) {
     }
 
     if (item.type !== 'standing') {
-      body.append(dateDetails);
-      body.append(collapsible('Outcome', buildResolutionForm(item, course, ctx)));
-      body.append(collapsible('External block', buildExternalBlockForm(item, ctx)));
+      if (exam) body.append(dateDetails);
+      else more.append(dateDetails);
+      const outcome = collapsible('Outcome', buildResolutionForm(item, course, ctx));
+      const externalBlock = collapsible('External block', buildExternalBlockForm(item, ctx));
+      if (state.resolution) body.append(outcome); else more.append(outcome);
+      if (state.externalBlock) body.append(externalBlock); else more.append(externalBlock);
       const links = buildLinks(item, course);
       if (links) body.append(links);
     }
 
-    body.append(collapsible('Labels', buildLabels(item)));
+    more.append(collapsible('Labels', buildLabels(item)));
     const attached = Object.entries(store.snapshot().documents || {}).filter(([, record]) => !record.deletedAt && (record.itemIds || []).includes(item.id));
     if (attached.length) body.append(collapsible('Documents', documentRows(attached, ctx)));
 
     const scoreForm = !exam || state.doneAt || state.score != null ? buildScoreForm(item, course, ctx) : null;
-    if (scoreForm) body.append(scoreForm);
+    if (scoreForm && (state.doneAt || state.score != null || exam)) body.append(scoreForm);
 
     const ring = avoidance(item);
     if (ring) {
@@ -213,8 +223,13 @@ export function createDetailPanel(ctx) {
       }
     }
 
-    if (!exam) body.append(buildEffortPicker(item, band));
-    if (item.dateObj && !exam) body.append(buildDueTime(item));
+    if (!exam && item.type !== 'standing') {
+      const adjustments = el('div', 'task-adjustments');
+      if (scoreForm && !state.doneAt && state.score == null) adjustments.append(scoreForm);
+      adjustments.append(buildEffortPicker(item, band));
+      if (item.dateObj) adjustments.append(buildDueTime(item));
+      more.append(collapsible('Adjust task details', adjustments));
+    }
 
     const dl = document.createElement('dl');
     if (item.dateObj) {
@@ -233,9 +248,9 @@ export function createDetailPanel(ctx) {
     const latePolicy = group?.latePolicy || course.latePolicy;
     if (latePolicy) dl.append(row('Late submission', latePolicy.status === 'never' ? 'Not accepted under this course rule' : 'Policy not confirmed'));
 
-    body.append(collapsible('Grade detail', dl));
+    more.append(collapsible('Grade detail', dl));
     if (group && group.note) body.append(block('Group rule', el('p', null, group.note)));
-    if (item.notes) body.append(block('Notes', el('p', null, item.notes)));
+    if (item.notes) more.append(block('Notes', el('p', null, item.notes)));
 
     if (item.steps && item.steps.length) {
       const list = el('ul', 'steps');
@@ -246,6 +261,7 @@ export function createDetailPanel(ctx) {
       });
       body.append(block('Steps from the syllabus', list));
     }
+    body.append(more);
   }
 
   function buildExamDateSources(item) {
@@ -412,9 +428,9 @@ export function createDetailPanel(ctx) {
     return wrap;
   }
 
-  function buildStepBox(item) {
+  function buildStepBox(item, showHeading = true) {
     const wrap = el('div', 'block');
-    wrap.append(el('h3', null, 'First step'));
+    if (showHeading) wrap.append(el('h3', null, 'First step'));
     const form = el('form', 'step-form');
     const input = el('input', 'circling-input');
     input.type = 'text';
