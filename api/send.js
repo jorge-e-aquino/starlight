@@ -3,7 +3,7 @@ import webpush from 'web-push';
 import schema from '../course_map_schema_v2.json' with { type: 'json' };
 import { dateTrust } from '../src/truth.js';
 import { isExam } from '../src/exams.js';
-import { morningCandidate, examMorningCandidate, examReadinessCandidate, noticingCandidate, selectNotifications } from '../src/notification.js';
+import { morningCandidate, examMorningCandidate, examReadinessCandidate, prerequisiteReadinessCandidate, noticingCandidate, selectNotifications } from '../src/notification.js';
 
 const zone = 'America/New_York';
 const dayKey = (now) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -18,12 +18,21 @@ export function candidatesForDay(semester, overlay, day) {
     const trust = dateTrust(item, overlay);
     const d = trust.date ? daysUntil(day, trust.date) : Infinity;
     const named = { ...item, courseCode: course.code };
+    const gate = (semester.courses || []).flatMap((c) => (c.items || []).map((candidate) => ({ ...candidate, courseCode: c.code }))).find((candidate) =>
+      (candidate.blocks || []).some((edge) => (typeof edge === 'string' ? edge : edge.itemId) === item.id && d <= (typeof edge === 'string' ? 0 : edge.leadDays || 0)) &&
+      !overlay.items?.[candidate.id]?.doneAt && candidate.status !== 'done'
+    );
     let morningExam = null;
     if (isExam(item) && d === 0) {
       morningExam = examMorningCandidate(named, state.examDossier, trust, day);
       if (morningExam) candidates.push(morningExam);
     }
     if (d < 0 || d > 3 || item.type === 'standing') continue;
+    if (isExam(item) && gate) {
+      const candidate = prerequisiteReadinessCandidate(gate, named, trust, day, Boolean(overlay.items?.[gate.id]?.externalBlock));
+      if (candidate) candidates.push(candidate);
+      continue;
+    }
     if (isExam(item) && d <= 2) {
       if (morningExam) continue;
       const candidate = examReadinessCandidate(named, trust, day, d);
@@ -31,11 +40,7 @@ export function candidatesForDay(semester, overlay, day) {
       continue;
     }
     if (trust.status !== 'verified' && d !== 1) continue;
-    const gated = (semester.courses || []).some((c) => (c.items || []).some((gate) =>
-      (gate.blocks || []).some((edge) => (typeof edge === 'string' ? edge : edge.itemId) === item.id) &&
-      !overlay.items?.[gate.id]?.doneAt && gate.status !== 'done'
-    ));
-    if (gated) continue;
+    if (gate) continue;
     const candidate = trust.status === 'verified' ? morningCandidate(named, day) : noticingCandidate(named, trust, day);
     if (!candidate) continue;
     candidate.priority = (d === 0 ? 10 : 4 - d) + (item.type === 'exam' || item.type === 'final' ? 3 : 0) + (item.points || 0) / 1000;

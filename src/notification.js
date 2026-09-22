@@ -70,6 +70,22 @@ export function examReadinessCandidate(item, trust, dayKey, daysAway) {
   };
 }
 
+export function prerequisiteReadinessCandidate(gate, exam, trust, dayKey, externallyBlocked) {
+  if (!gate?.id || !gate.courseCode || !gate.title || !exam?.title || !dayKey) return null;
+  const next = externallyBlocked ? 'Check the blocker and its follow-up.' : 'Complete this setup step.';
+  const dateNote = trust?.status === 'verified' ? '' : trust?.status === 'contradicted'
+    ? ' Exam sources disagree. Check the current course instructions.'
+    : ' Check the listed exam date in the course source.';
+  return {
+    id: `exam:prerequisite:${gate.id}:${exam.id}:${dayKey}`,
+    itemId: gate.id,
+    kind: 'regular',
+    priority: 24,
+    title: `${gate.courseCode} · ${gate.title}`,
+    action: `${exam.title} depends on this. ${next}${dateNote}`
+  };
+}
+
 /** A dossier must support every concrete claim in an exam-morning alert. */
 export function examMorningCandidate(item, dossier, trust, dayKey) {
   if (!item || !dossier || trust?.status !== 'verified' || !trust.source || trust.date !== dayKey) return null;
